@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.secrets/
+build/
+coordination/*.jsonl
+coordination/*-stderr.log
+
+# Portable deployment: private generated configuration and database backups
+.env.*
+!.env.example
+.runtime/
+backups/
+*.dump
+*.bak
+*.log
+.DS_Store
+release/
+dist/

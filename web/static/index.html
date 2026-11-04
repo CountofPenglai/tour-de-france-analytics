@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tour de France 2025 · Race Analytics</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <link rel="stylesheet" href="/static/appearance.css" />
+  <link rel="stylesheet" href="/static/refinements.css" />
+  <link rel="stylesheet" href="/static/drilldown.css" />
+  <link rel="stylesheet" href="/static/insights.css" />
+</head>
+<body>
+<dialog id="filter-drawer" class="filter-drawer" aria-labelledby="filter-drawer-title"><div class="drawer-title"><div><h2 id="filter-drawer-title">Scope &amp; filters</h2></div><button type="button" id="close-filters-btn" class="icon-button" aria-label="Close filters without applying">×</button></div><!-- Filters apply together on submit; labels carry the instructions. -->      <!-- Global Analytical Controls -->
+      <form id="global-filter-form" class="filter-toolbar" aria-label="Analytical Scope Controls">
+        <div class="toolbar-header">
+
+          <button type="button" id="reset-filters-btn" class="text-link-btn" title="Reset all filters to default Final Adjusted GC">Reset &amp; apply</button>
+        </div>
+
+        <!-- Stage Scope -->
+        <div class="control-group">
+          <label for="filter-stage-scope" class="control-label">Stage Scope</label>
+          <select id="filter-stage-scope" name="stage_scope" class="control-select">
+            <option value="final" selected>Full race · Stages 1–21</option>
+            <option value="as_of">Through a stage · 1–S</option>
+            <option value="selection">Selected stages / terrain</option>
+          </select>
+        </div>
+
+        <!-- As-Of Stage Cutoff (shown when stage_scope = as_of) -->
+        <div class="control-group hidden" id="group-as-of-stage">
+          <label for="filter-as-of-stage" class="control-label">
+            Cutoff Stage (1..21)
+            <span class="label-hint" id="as-of-stage-caption">Through Stage 21</span>
+          </label>
+          <select id="filter-as-of-stage" name="as_of_stage" class="control-select">
+            <option value="21">Stage 21 (Final)</option>
+          </select>
+        </div>
+
+        <!-- Custom Stage Selection (shown when stage_scope = selection) -->
+        <div class="control-group hidden" id="group-custom-selection">
+          <span class="control-label">Stage Terrain</span>
+          <div class="chip-checkbox-grid" role="group" aria-label="Stage terrain types">
+            <label class="chip-check">
+              <input type="checkbox" name="stage_types" value="flat" />
+              <span>Flat</span>
+            </label>
+            <label class="chip-check">
+              <input type="checkbox" name="stage_types" value="hilly" />
+              <span>Hilly</span>
+            </label>
+            <label class="chip-check">
+              <input type="checkbox" name="stage_types" value="mountain" />
+              <span>Mountain</span>
+            </label>
+            <label class="chip-check">
+              <input type="checkbox" name="stage_types" value="individual time-trial" />
+              <span>Time-Trial (ITT)</span>
+            </label>
+          </div>
+
+          <label for="filter-stage-dropdown" class="control-label mt-compact">
+            Stages
+          </label>
+          <div class="stage-picker-row">
+            <select id="filter-stage-dropdown" class="control-select" aria-label="Choose a stage to add to selection">
+              <option value="">All stages in selected terrain…</option>
+            </select>
+            <button type="button" id="add-stage-btn" class="btn-secondary btn-compact">Add</button>
+          </div>
+          <div id="selected-stages-pills" class="selected-pills" aria-live="polite"></div>
+        </div>
+
+        <!-- Time Basis -->
+        <div class="control-group">
+          <label for="filter-time-basis" class="control-label">Time Basis</label>
+          <select id="filter-time-basis" name="time_basis" class="control-select">
+            <option value="adjusted" selected>Adjusted · Finish − Bonus + Penalty</option>
+            <option value="finish">Finish · elapsed time</option>
+          </select>
+        </div>
+
+        <!-- Rank Scope -->
+        <div class="control-group">
+          <label for="filter-rank-scope" class="control-label">Ranking Cohort</label>
+          <select id="filter-rank-scope" name="rank_scope" class="control-select">
+            <option value="overall" selected>Overall eligible riders</option>
+            <option value="filtered">Selected riders only</option>
+          </select>
+        </div>
+
+        <!-- Team Aggregation Rule -->
+        <div class="control-group">
+          <label for="filter-team-aggregation" class="control-label">Team Time Rule</label>
+          <select id="filter-team-aggregation" name="team_aggregation" class="control-select">
+            <option value="stage_top3" selected>Stage Top-3 per Stage (Official Rule)</option>
+            <option value="cumulative_top3">Cumulative Top-3 Finishers</option>
+          </select>
+        </div>
+
+        <!-- Team Filter -->
+        <div class="control-group">
+          <label for="filter-team-select" class="control-label">Teams</label>
+          <div class="stage-picker-row">
+            <select id="filter-team-select" class="control-select">
+              <option value="">All teams</option>
+            </select>
+            <button type="button" id="add-team-btn" class="btn-secondary btn-compact" aria-label="Add selected team to filter">Add</button>
+          </div>
+          <div id="selected-teams-pills" class="selected-pills" aria-live="polite"></div>
+        </div>
+
+        <!-- Riders -->
+        <div class="control-group">
+          <label for="filter-rider-select" class="control-label">Riders</label>
+          <div class="stage-picker-row">
+            <select id="filter-rider-select" class="control-select">
+              <option value="">All riders</option>
+            </select>
+            <button type="button" id="add-rider-btn" class="btn-secondary btn-compact" aria-label="Add selected rider to filter">Add</button>
+          </div>
+          <div id="selected-riders-pills" class="selected-pills" aria-live="polite"></div>
+        </div>
+
+        <!-- Young Rider Toggle -->
+        <div class="control-group">
+          <label class="toggle-row" for="filter-young-only">
+            <input type="checkbox" id="filter-young-only" name="young_only" />
+            <span>Young riders · Born ≥ 2000</span>
+          </label>
+        </div>
+
+        <button type="submit" id="apply-filters-btn" class="btn-primary">
+          Apply filters
+        </button>
+      </form>
+
+</dialog>
+  <div class="portal-shell">
+    <!-- Left Navigation & Global Analytical Filter Toolbar -->
+    <aside class="portal-sidebar" aria-label="Portal Navigation and Global Filters">
+<div class="rail-brand"><div class="rail-symbol" aria-hidden="true">T</div><h1>TOUR DATA<span>ANALYTICS LAB</span></h1></div>
+<div class="rail-group"><div class="rail-label">RACE INTELLIGENCE</div><nav class="workspace-nav rail-nav" aria-label="Dashboard sections"><button type="button" class="nav-btn rail-item active" data-view="overview" id="nav-view-overview"><span class="nav-num">01</span>Overview</button><button type="button" class="rail-item" data-open-module="rider_standings"><span class="nav-num">02</span>Classifications</button><button type="button" class="rail-item" data-open-module="team_standings"><span class="nav-num">03</span>Riders &amp; Teams</button><button type="button" class="rail-item" data-open-module="stage_summary"><span class="nav-num">04</span>Stages &amp; Routes</button><button type="button" class="rail-item" data-open-module="country_participation"><span class="nav-num">05</span>Country Participation</button><button type="button" class="nav-btn rail-item" data-view="drilldown" id="nav-view-drilldown"><span class="nav-num">06</span>Drill Down</button></nav></div>
+<div class="rail-group"><div class="rail-label">STRATEGIC INSIGHTS</div><nav class="rail-nav" aria-label="Extended analyses"><button type="button" class="rail-item" data-open-module="rider_specialisation"><span class="nav-num">↗</span>Terrain Specialists</button><button type="button" class="rail-item" data-open-module="gc_evolution"><span class="nav-num">↗</span>Decisive Stages</button><button type="button" class="rail-item" data-open-module="team_depth"><span class="nav-num">↗</span>Team Depth</button></nav></div>
+<nav class="workspace-nav rail-utilities" aria-label="Additional workspace views"><button type="button" class="nav-btn hidden" data-view="explore" id="nav-view-explore">Explore</button><button type="button" class="nav-btn rail-item" data-view="methods" id="nav-view-methods"><span class="nav-num">ⓘ</span>Methods &amp; definitions</button></nav>
+<div class="rail-footer"><div class="connected"><i></i>2025 race dataset</div><b>BT5110 · Course Project</b><div id="rail-race-context">Data, explained through racing.</div></div>
+      <!-- P0 Native Metabase Link Card -->
+      <div class="p0-native-card">
+        <div class="p0-card-header">
+          <span class="chip chip-navy">Native BI</span>
+          <span id="health-status-dot" class="status-indicator" title="Checking portal status">Ready</span>
+        </div>
+        <!-- Metabase provides native BI filters and chart drill-down. -->
+        <a id="p0-native-link" href="http://127.0.0.1:3000" target="_blank" rel="noopener noreferrer" class="btn-outline-dark">
+          Open Metabase ↗
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Content Column -->
+    <main class="portal-main">
+      <!-- Top Editorial Context Bar & Scope Interpretation Banner -->
+      <header class="editorial-topbar">
+        <div class="topbar-title-block"><h2 id="workspace-heading" class="workspace-heading">Race overview</h2></div>
+        <div class="topbar-actions"><a id="topbar-p0-link" href="http://127.0.0.1:3000" target="_blank" rel="noopener noreferrer" class="topbar-link">Open Metabase ↗</a><button type="button" id="open-inspector-btn" class="btn-secondary btn-compact">Inspect a rider ↗</button><button type="button" id="open-filters-btn" class="btn-primary btn-compact" aria-haspopup="dialog">Filters <span aria-hidden="true">≡</span></button></div>
+      </header>
+      <div class="active-scope-bar"><span class="scope-label">Scope</span><span id="active-scope-pill" class="chip chip-yellow">Final full race</span><span id="active-basis-pill" class="chip chip-navy">Adjusted time</span><span id="active-cohort-label" class="cohort-label"></span></div>
+      <!-- Honest Metric & Scope Interpretation Banner -->
+      <details class="scope-notice-banner"><summary>Calculation notes</summary><div class="scope-notice-content">
+        <div class="notice-col">
+          <strong class="notice-heading" id="scope-explanation-title">Final standings:</strong>
+          <span id="scope-explanation-body">
+            Cumulative standings require completing all 21 stages (160 of 184 starters). Exited riders retain stage results and team roster records but do not receive a final 21-stage GC rank.
+          </span>
+        </div>
+        <div class="notice-col notice-proxy">
+          <strong class="notice-heading">Proxy scores:</strong>
+          <span>
+            <em>Points Proxy</em> and <em>KOM Proxy</em> use stage results and terrain; they are <strong>never official</strong> sprint or mountain classifications.
+          </span>
+        </div>
+      </div></details>
+
+      <!-- Deep-Link Validation & Safe Navigation Feedback Banner -->
+      <section id="deeplink-feedback-banner" class="deeplink-banner hidden" role="status" aria-live="polite">
+        <div class="deeplink-banner-content">
+          <strong id="deeplink-banner-title">Navigation Notice:</strong>
+          <span id="deeplink-banner-message"></span>
+        </div>
+        <button type="button" id="deeplink-banner-dismiss" class="btn-secondary btn-compact" aria-label="Dismiss navigation notice">
+          Dismiss
+        </button>
+      </section>
+
+      <!-- Workspace Grid: Left/Wide Analytical Area + Right/Independent Team->Rider->Stage Drill Panel -->
+      <div class="workspace-split" id="workspace-split-container">
+        <!-- Primary Analytical Area -->
+        <div class="workspace-primary">
+
+          <section id="view-drilldown" class="view-section hidden" aria-labelledby="workspace-heading"><div id="drill-workspace" class="drill-workspace"></div></section>
+
+          <!-- VIEW 1: DASHBOARD (OVERVIEW + EMBEDDED BI) -->
+          <section id="view-overview" class="view-section active" aria-labelledby="workspace-heading">
+<section class="race-hero" aria-label="Tour de France 2025"><div class="hero-copy"><span class="hero-eyebrow">TOUR DE FRANCE 2025</span><h2>Every stage.<br>A different story.</h2><p>Explore the riders, teams and moments<br>behind three weeks of racing.</p><button class="hero-link" data-open-module="stage_summary" type="button">Explore the race <span>↗</span></button></div><a class="photo-credit" href="https://commons.wikimedia.org/wiki/File:Peloton_during_Simacourbe_climb_of_Tour_de_France_2024_stage_13.jpg" target="_blank" rel="noopener noreferrer">Tour 2024 · Hugo LUC · CC BY-SA 4.0</a></section>
+<div class="race-context-label">THE 2025 RACE <span>Full-race context · unchanged by filters</span></div>
+<div id="race-kpis" class="race-kpis" aria-label="Full race context"><div class="kpi-card">Loading race context…</div></div>
+<div class="overview-cards-grid"><article class="card stage-trend-card"><div class="card-header"><div><h3 class="card-title">How the peloton changes</h3></div><button type="button" data-open-module="stage_summary" class="text-link-btn">Stage detail ↗</button></div><p class="chart-subtitle">All riders · active stage scope</p><div id="stage-trend-chart" class="stage-trend-chart" aria-live="polite">Loading stage data…</div><div class="chart-foot"><span><i></i> Stage finishers</span></div></article>              <article class="card">
+                <div class="card-header">
+                  <div>
+                    <span class="card-kicker">INDIVIDUAL STANDINGS · <button type="button" data-open-module="rider_standings" class="text-link-btn">Full table ↗</button></span>
+                    <h3 class="card-title" id="overview-gc-card-title">Classification Leaders</h3>
+                  </div>
+                  <select id="overview-classification-select" class="control-select select-compact" aria-label="Classification mode">
+                    <option value="gc" selected>General Classification (GC)</option>
+                    <option value="young">Young Rider (White Jersey · Born ≥ 2000)</option>
+                    <option value="points_proxy">Points Proxy (Finish Rank Derived)</option>
+                    <option value="kom_proxy">KOM Proxy (Climb Stage Derived)</option>
+                    <option value="mountain_time">Mountain Stage Cumulative Time</option>
+                  </select>
+                </div>
+                <div id="overview-standings-container" class="table-scroll-wrap">
+                  <div class="state-box state-loading"><p>Loading individual standings…</p></div>
+                </div>
+              </article>
+
+</div>            <!-- Embedded Metabase Dashboard Card -->
+            <article class="card embed-card">
+              <div class="card-header embed-card-header">
+                <div>
+
+                  <h3 class="card-title" id="bi-workspace-title" tabindex="-1">Explore &amp; compare</h3>
+                </div>
+                <div class="embed-header-controls"><button type="button" id="back-to-table-btn" class="btn-secondary btn-compact hidden">← Back to table</button>
+                  <button type="button" id="refresh-embed-btn" class="btn-secondary btn-compact">
+                    Refresh dashboard
+                  </button>
+                </div>
+              </div>
+
+              <!-- 5-Tab Bar -->
+              <div class="embed-tabs-bar hidden" role="region" aria-label="Dashboard Views">
+                <div class="embed-tabs-caption">
+                  <span>Views:</span>
+                  <small id="embed-tabs-mode-note">Explore five analytical views</small>
+                </div>
+                <div id="embed-tabs-buttons" class="embed-tab-list" role="tablist">
+                  <button type="button" class="embed-tab-btn active" data-tab-index="1" data-tab-key="tab_1_overview">
+                    1 · Executive &amp; Race Overview
+                  </button>
+                  <button type="button" class="embed-tab-btn" data-tab-index="2" data-tab-key="tab_2_classifications">
+                    2 · Classifications Comparison
+                  </button>
+                  <button type="button" class="embed-tab-btn" data-tab-index="3" data-tab-key="tab_3_performance">
+                    3 · Rider &amp; Team Performance
+                  </button>
+                  <button type="button" class="embed-tab-btn" data-tab-index="4" data-tab-key="tab_4_countries">
+                    4 · Country Participation
+                  </button>
+                  <button type="button" class="embed-tab-btn" data-tab-index="5" data-tab-key="tab_5_insights">
+                    5 · Deep-Dive Insights
+                  </button>
+                </div>
+              </div>
+
+              <!-- Iframe / Loading / Unconfigured Container -->
+              <div class="embed-viewport" id="embed-viewport">
+                <div id="embed-loading-state" class="state-box state-loading">
+                  <div class="spinner" aria-hidden="true"></div>
+                  <p>Loading embedded race dashboard…</p>
+                </div>
+
+                <div id="embed-error-state" class="state-box state-warning hidden" role="status">
+                  <div class="state-badge">Embedded Dashboard Unavailable</div>
+                  <h4 id="embed-error-title">Embedded Race Dashboard Not Configured</h4>
+                  <p id="embed-error-message">
+                    Open Metabase or continue with the analysis tables below.
+                  </p>
+                  <div class="state-actions">
+                    <a id="embed-fallback-p0-link" href="http://127.0.0.1:3000" target="_blank" rel="noopener noreferrer" class="btn-primary">
+                      Open Metabase ↗
+                    </a>
+                    <button type="button" id="switch-to-explore-btn" class="btn-secondary">
+                      Open Explore View
+                    </button>
+                  </div>
+                </div>
+
+                <iframe
+                  id="metabase-iframe"
+                  class="metabase-iframe hidden"
+                  title="Tour de France 2025 Race Dashboard"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                  loading="lazy"
+                ></iframe>
+              </div>
+            </article>
+
+<div class="insights-heading"><h3>Strategic insights</h3></div><div class="insight-grid"><button type="button" data-open-module="rider_specialisation" class="insight-card"><span class="insight-icon">↗</span><span><small>01 / TERRAIN</small><strong>Recruit for the terrain</strong></span><b>↗</b></button><button type="button" data-open-module="gc_evolution" class="insight-card"><span class="insight-icon blue">⌁</span><span><small>02 / RACE DYNAMICS</small><strong>Find the decisive stages</strong></span><b>↗</b></button><button type="button" data-open-module="team_depth" class="insight-card"><span class="insight-icon yellow">≋</span><span><small>03 / TEAM DEPTH</small><strong>Build a balanced squad</strong></span><b>↗</b></button></div>
+<details class="team-snapshot-disclosure"><summary>Team standings</summary><div class="team-snapshot">              <article class="card">
+                <div class="card-header">
+                  <div>
+
+                    <h3 class="card-title" id="overview-team-card-title">Team Standings</h3>
+                  </div>
+
+                </div>
+                <div id="overview-teams-container" class="table-scroll-wrap">
+                  <div class="state-box state-loading"><p>Loading team standings…</p></div>
+                </div>
+              </article>
+</div>
+</details>
+          </section>
+
+          <!-- VIEW 2: EXPLORE MODULES -->
+          <section id="view-explore" class="view-section hidden" aria-label="Interactive Analytical Explorer">
+            <div class="card explorer-card">
+<!-- Navigation is provided by the persistent sidebar. Former duplicated navigation:
+              <div class="card-header explorer-header">
+                <div>
+                  <span class="card-kicker">ANALYTICAL MODULE EXPLORER</span>
+                  <h3 class="card-title">Go deeper into the data</h3>
+                </div>
+                <div class="module-tab-bar" role="tablist" aria-label="Analytical Modules">
+                  <button type="button" class="module-tab active" data-module="rider_standings">
+                    Classifications
+                  </button>
+                  <button type="button" class="module-tab" data-module="team_standings">
+                    Team Standings
+                  </button>
+                  <button type="button" class="module-tab" data-module="stage_summary">
+                    Stage Summary
+                  </button>
+                  <button type="button" class="module-tab" data-module="country_participation">
+                    Countries
+                  </button>
+                  <button type="button" class="module-tab" data-module="rider_specialisation">
+                    Terrain Specialisation
+                  </button>
+                  <button type="button" class="module-tab" data-module="gc_evolution">
+                    GC Evolution
+                  </button>
+                  <button type="button" class="module-tab" data-module="team_depth">
+                    Team Depth
+                  </button>
+                </div>
+              </div>
+
+-->
+              <!-- Module Sub-Toolbar -->
+              <div class="module-subtoolbar" id="explore-subtoolbar">
+                <div class="module-meta">
+                  <h3 id="explore-module-title" class="module-heading">Classification comparison</h3>
+                  <p id="explore-module-desc">
+                    Compare time and proxy rankings under the same race scope.
+                  </p>
+                </div>
+                <div class="module-controls" id="explore-classification-wrap">
+                  <label for="explore-classification-select" class="control-label-inline">Classification:</label>
+                  <select id="explore-classification-select" class="control-select select-compact">
+                    <option value="gc" selected>GC (Adjusted / Finish Time)</option>
+                    <option value="young">Young Rider (White Jersey · Born ≥ 2000)</option>
+                    <option value="points_proxy">Points Proxy (Non-Official)</option>
+                    <option value="kom_proxy">KOM Proxy (Non-Official)</option>
+                    <option value="mountain_time">Mountain Stages Time</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="insight-story" class="insight-story hidden" aria-label="Strategic insight charts"></div>
+              <div class="analysis-view-toolbar"><span id="analysis-view-label">Results</span><button type="button" id="insight-table-toggle" class="text-link-btn hidden" aria-controls="explore-table-container" aria-expanded="false">Show data table</button><button type="button" id="explore-charts-btn" class="btn-primary btn-compact">Metabase charts ↗</button></div>
+              <div id="explore-table-container" class="table-scroll-wrap table-tall">
+                <div class="state-box state-loading"><p>Select a module to view results…</p></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- VIEW 3: METHODS, COURSE CONCEPTS & METRIC DEFINITIONS -->
+          <section id="view-methods" class="view-section hidden" aria-label="Course Concepts and Metric Definitions">
+<div class="methods-grid concise-methods">
+  <article class="card method-card"><h3 class="card-title">Scope &amp; eligibility</h3><dl class="definition-list"><dt>Final race</dt><dd>Final GC/time standings require completing all 21 stages. Stage-based analyses retain completed results from exited riders.</dd><dt>Through stage S</dt><dd>Cumulative stages 1–S; riders must complete every stage up to that point.</dd><dt>Selected stages</dt><dd>Performance over your selected stages and terrain, rather than full-race GC.</dd><dt>Ranking cohort</dt><dd>Overall keeps the full eligible ranking; filtered reranks the selected riders.</dd></dl></article>
+  <article class="card method-card"><h3 class="card-title">Time &amp; rankings</h3><dl class="definition-list"><dt>Adjusted time</dt><dd>Finish time − time bonus + time penalty. Times are shown as hours:minutes:seconds.</dd><dt>Young Rider</dt><dd>Riders born on or after 1 January 2000.</dd><dt>Per-stage top 3</dt><dd>Sum each team's three fastest riders on every stage; contributors can change.</dd><dt>Cumulative top 3</dt><dd>Sum the three fastest riders who completed every stage in the selected scope.</dd><dt>Points Proxy / KOM Proxy</dt><dd>Stage-finish and terrain-based scores, <strong>never official</strong> sprint or mountain classifications. Tied scores share a rank.</dd></dl></article>
+  <article class="card method-card"><h3 class="card-title">Participation &amp; samples</h3><dl class="definition-list"><dt>Country participation</dt><dd>Rider nationality and team registration are different roles. Country summaries cover the whole race; nationality counts exclude unknown nationality.</dd><dt>Stage finishers</dt><dd>All riders who finished each selected stage; rider and team filters do not narrow this count.</dd><dt>Percentile &amp; sample size</dt><dd>Higher is better; compare the number of completed stages alongside each average.</dd><dt>Native terrain Pivot</dt><dd>Full-race view. Use the adjacent Cross-Tab or Explore table for filtered comparisons.</dd><dt>Retired riders</dt><dd>Keep their completed stages and team contributions; incomplete totals are not final GC.</dd></dl></article>
+  <article class="card method-card"><h3 class="card-title">OLAP operations</h3><dl class="definition-list"><dt>Slice &amp; dice</dt><dd>Combine terrain, stages, teams, riders and age eligibility in Filters.</dd><dt>Roll-up</dt><dd>Compare stage results at rider, team, terrain or race-week level.</dd><dt>Drill-down</dt><dd>Follow a team to its riders and individual stage results, or open a stage or country's members.</dd><dt>Pivot</dt><dd>Compare riders across four terrain types in the Metabase matrix.</dd></dl><p class="method-note">Race participation and stage results use separate counting levels, so riders and route distances are not multiplied by the number of results.</p></article>
+</div>
+<!-- Implementation reference retained for maintainers; detailed architecture also lives in docs/star-schema.md and docs/portal.md.
+            <div class="methods-grid">
+              <article class="card method-card">
+                <span class="card-kicker">STAR SCHEMA / FACT CONSTELLATION DESIGN</span>
+                <h3 class="card-title">1. Fact Table Grain Separation &amp; Fanout Prevention</h3>
+                <p>
+                  The PostgreSQL warehouse (schema <code>dw</code>) separates two distinct business processes that share conformed dimensions (<code>dim_rider</code>, <code>dim_team</code>, <code>dim_country</code>):
+                </p>
+                <ul class="method-list">
+                  <li>
+                    <strong><code>dw.fact_results</code> (Grain: <code>rider_key × stage_key</code>, 3,602 rows):</strong>
+                    Stores stage finish rank, raw finish time, bonuses, penalties, precomputed <code>adjusted_time_seconds</code>, and proxy classification points.
+                  </li>
+                  <li>
+                    <strong><code>dw.fact_participation</code> (Grain: <code>rider_key</code> per race, 184 rows):</strong>
+                    Stores <code>participant_count = 1</code>, <code>finished_race_flag</code>, and <code>exit_flag</code>.
+                  </li>
+                  <li>
+                    <strong>Why separate grains matter:</strong> Joining stage results directly to participation or stage distances without pre-aggregating inflates starter counts and total race distance. Functions such as <code>dw.team_depth</code>, <code>dw.stage_summary</code>, and the portal's <code>/api/team/{key}/riders</code> endpoint pre-aggregate each fact table before joining through conformed dimensions.
+                  </li>
+                </ul>
+              </article>
+
+              <article class="card method-card">
+                <span class="card-kicker">DIMENSIONS &amp; DATA QUALITY RULES</span>
+                <h3 class="card-title">2. Role-Playing Country, Denormalization &amp; Unknown Member</h3>
+                <ul class="method-list">
+                  <li>
+                    <strong>Role-Playing Dimension (<code>dw.dim_country</code>):</strong> Referenced twice in both fact tables as <code>rider_country_key</code> (rider nationality) and <code>team_country_key</code> (team registration country), enabling side-by-side comparison in <code>dw.country_participation</code>.
+                  </li>
+                  <li>
+                    <strong>Unknown Member (<code>country_key = 0, 'UNK'</code>):</strong> Rider <code>#78 Aleksandr Vlasov</code> has <code>NULL</code> nationality in the source CSV. Mapping missing nationality to surrogate key <code>0 ('UNK' / 'Unknown / Unspecified')</code> keeps <code>fact_results.rider_country_key</code> strictly <code>NOT NULL</code> so inner joins never drop his stage results or team contributions, while excluding the <code>'UNK'</code> row from country nationality distribution tables.
+                  </li>
+                  <li>
+                    <strong>Denormalized Stage Dimension (<code>dw.dim_stage</code>):</strong> Embeds start/finish location and country attributes directly into <code>dim_stage</code> and retains same-city circuit/time-trial stages (Stage 1 Lille, Stage 5 Caen, Stage 11 Toulouse).
+                  </li>
+                </ul>
+              </article>
+
+              <article class="card method-card">
+                <span class="card-kicker">SHARED SQL FORMULAS &amp; UNITS</span>
+                <h3 class="card-title">3. Metric Definitions, Units &amp; Proxy Transparency</h3>
+                <table class="data-table compact-table">
+                  <thead>
+                    <tr>
+                      <th>Metric</th>
+                      <th>Unit</th>
+                      <th>Definition &amp; Scope Rule</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>adjusted_time_seconds</code></td>
+                      <td><code>seconds</code> (<code>HH:MM:SS</code>)</td>
+                      <td><code>finish_time_seconds - time_bonus_seconds + time_penalty_seconds</code></td>
+                    </tr>
+                    <tr>
+                      <td><code>is_young_rider</code> (Young Rider)</td>
+                      <td><code>boolean</code></td>
+                      <td><code>date_of_birth &gt;= DATE '2000-01-01'</code> (aged 25 or under in the 2025 season).</td>
+                    </tr>
+                    <tr>
+                      <td><code>stage_top3</code> vs <code>cumulative_top3</code></td>
+                      <td><code>seconds</code></td>
+                      <td>
+                        <code>stage_top3</code> sums each team's fastest 3 riders per stage (requiring ≥3 finishers on every stage in scope).
+                        <code>cumulative_top3</code> sums the 3 fastest riders who completed all stages in scope.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>rank_percentile</code></td>
+                      <td><code>0.00..100.00%</code></td>
+                      <td><code>(cohort_size - rank) * 100.0 / NULLIF(cohort_size - 1, 0)</code> (<code>100%</code> = Rank 1).</td>
+                    </tr>
+                    <tr>
+                      <td><code>stage_points_proxy</code> &amp; <code>kom_points_proxy</code></td>
+                      <td><code>proxy points</code></td>
+                      <td>
+                        <strong>Derived Proxy Only (Non-Official):</strong> Mapped from <code>stage_type</code> and <code>finish_rank</code> because intermediate sprint and climb pass results are not in the source CSV. Time gap is <code>NULL</code> for proxy point leaderboards.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>finisher_rate</code></td>
+                      <td><code>ratio 0..1</code> (<code>%</code>)</td>
+                      <td><code>finisher_count / NULLIF(rider_count, 0)</code> (<code>NULL</code> for countries with 0 participating riders).</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </article>
+
+              <article class="card method-card">
+                <span class="card-kicker">OLAP OPERATIONS &amp; PORTAL ARCHITECTURE</span>
+                <h3 class="card-title">4. OLAP Operations &amp; Signed Embedding Architecture</h3>
+                <ul class="method-list">
+                  <li><strong>Slice &amp; Dice:</strong> Single-dimension (e.g., <code>stage_types = ['mountain']</code>) and multi-dimension subcube filtering via bound <code>psycopg.types.json.Jsonb</code> parameters to <code>dw.rider_standings</code>, <code>dw.team_standings</code>, <code>dw.rider_stage_results</code>, <code>dw.stage_summary</code>, <code>dw.country_participation</code>, <code>dw.rider_specialisation</code>, <code>dw.team_depth</code>, and <code>dw.gc_evolution</code>.</li>
+                  <li><strong>Roll-up:</strong> Stage grain → Race Week / Stage Type / Team totals, including explicit SQL <code>GROUP BY ROLLUP</code> in <code>dw.olap_rollup</code>.</li>
+                  <li><strong>Drill-down:</strong> 3-level hierarchy in the expandable inspector: <em>Team Standings → Full Team Roster (including exits) → Individual Rider Stage-by-Stage Results</em>.</li>
+                  <li><strong>Pivot:</strong> Terrain specialisation matrix across <code>flat</code>, <code>hilly</code>, <code>mountain</code>, and <code>individual time-trial</code> via <code>dw.rider_specialisation</code>.</li>
+                  <li><strong>Server-Signed Embedding:</strong> Metabase dashboard iframe URLs are signed server-side using <code>HS256</code> JWTs with a 10-minute expiry (<code>exp = iat + 600</code>) and automatically refreshed before expiration.</li>
+                </ul>
+              </article>
+            </div>
+-->
+          </section>
+        </div>
+
+        <!-- Independent Right-Hand Drill Panel: Team -> Rider (incl. exits) -> Stage Results -->
+        <details id="inspector-details" class="inspector-disclosure"><summary><span>Team → Rider → Stage</span><span>Inspect results ↗</span></summary><aside class="workspace-drill" id="drill-panel" aria-label="Team to Rider to Stage 3-Level Drill Panel">
+          <div class="card drill-card">
+            <div class="card-header drill-header">
+              <div>
+                <!-- Team → roster → individual results. -->
+                <h3 class="card-title">Team → Rider → Stage Inspector</h3>
+              </div>
+              <div class="drill-header-actions">
+                <button type="button" id="drill-back-btn" class="btn-secondary btn-compact hidden" aria-label="Return to previous exploration view">
+                  ← Back to Exploration
+                </button>
+                <button type="button" id="drill-clear-btn" class="text-link-btn" aria-label="Clear selected team and rider inspector">
+                  Clear Inspector
+                </button>
+                <span class="chip chip-green" id="drill-scope-badge">All 21 Stages</span>
+              </div>
+            </div>
+
+            <!-- Step 1: Select Team -->
+            <div class="drill-step" id="drill-team-step">
+              <div class="drill-step-header">
+                <span class="step-num">1</span>
+                <label for="drill-team-select" class="drill-step-title">Team</label>
+              </div>
+              <select id="drill-team-select" class="control-select">
+                <option value="">Choose a team…</option>
+              </select>
+              <div id="drill-team-summary" class="drill-summary-strip hidden"></div>
+            </div>
+
+            <!-- Step 2: Team Roster (All Starters Including Later Exits) -->
+            <div class="drill-step" id="drill-roster-step" tabindex="-1">
+              <div class="drill-step-header">
+                <span class="step-num">2</span>
+                <div>
+                  <h4 class="drill-step-title" id="drill-roster-heading" tabindex="-1">Team roster</h4>
+                  <small class="drill-step-note">
+                    Includes exited riders. Available-stage time is <strong>not a final GC total</strong>.
+                  </small>
+                </div>
+              </div>
+              <div id="drill-roster-container" class="drill-table-wrap">
+                <div class="state-box state-empty">
+                  <p>Select a team to view its roster.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 3: Rider Stage-by-Stage Results -->
+            <div class="drill-step" id="drill-rider-step" tabindex="-1">
+              <div class="drill-step-header">
+                <span class="step-num">3</span>
+                <div>
+                  <h4 class="drill-step-title" id="drill-rider-heading" tabindex="-1">Rider Stage-by-Stage Results</h4>
+                  <small class="drill-step-note" id="drill-rider-subheading">
+
+                  </small>
+                </div>
+              </div>
+              <div id="drill-stages-container" class="drill-table-wrap">
+                <div class="state-box state-empty">
+                  <p>Select a rider to view stage results.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside></details>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/appearance.js" defer></script>
+  <script src="/static/drilldown.js"></script>
+  <script src="/static/insights.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

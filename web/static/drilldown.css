@@ -1,0 +1,67 @@
+/* Dedicated OLAP workspace; uses the existing portal palette and typography. */
+.drill-workspace { min-width:0; display:flex; flex-direction:column; gap:20px; }
+.drill-intro { display:flex; justify-content:space-between; align-items:center; gap:24px; padding:8px 0 2px; }
+.drill-intro h3 { font-size:25px; line-height:1.25; letter-spacing:-.6px; color:#183448; margin:9px 0 10px; }
+.drill-intro p { color:#657c8d; font-size:12px; line-height:1.7; margin:0; }
+.drill-olap-tag { flex-shrink:0; border:1px solid #d7e6e7; background:#eef8f7; color:#25726f; font-size:9px; font-weight:650; letter-spacing:1.2px; border-radius:5px; padding:9px 12px; }
+.drill-dimensions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.drill-dimension { cursor:pointer; display:flex; align-items:center; gap:14px; padding:20px; border:1px solid #dee6ed; border-radius:10px; background:#fff; text-align:left; font:inherit; color:#567082; transition:border-color .15s, background .15s; }
+.drill-dimension.selected { border-color:#e0c73b; background:#fffcea; box-shadow:inset 0 3px 0 #ffdf32; }
+.drill-dimension:hover { border-color:#688d9a; }
+.drill-dimension-number { font-size:11px; font-weight:700; color:#8d9ba7; }
+.drill-dimension.selected .drill-dimension-number { color:#887213; }
+.drill-dimension strong { display:block; font-size:15px; color:#213d50; margin-bottom:7px; }
+.drill-dimension small { display:block; font-size:10px; line-height:1.6; }
+.drill-dimension>span:last-child { margin-left:auto; font-size:22px; color:#1d7378; }
+.drill-role { display:flex; align-items:center; flex-wrap:wrap; gap:12px; padding:0 3px; font-size:12px; color:#415c70; }
+.drill-role label { font-weight:650; }
+.drill-role select { width:auto; max-width:300px; }
+.drill-role>span { font-size:11px; color:#718493; }
+.drill-journey { display:flex; min-width:0; background:#eef2f6; border:1px solid #dce4eb; border-radius:9px; overflow:hidden; }
+.hierarchy-step { flex:1 1 0; min-width:0; display:flex; align-items:center; gap:11px; padding:16px; border:0; background:transparent; color:#698090; text-align:left; cursor:pointer; font:inherit; }
+.hierarchy-step.current { background:#132f43; color:#fff; }
+.hierarchy-step.visited { background:#e9f3f2; color:#2b6969; }
+.hierarchy-step:disabled { opacity:.62; cursor:default; }
+.hierarchy-step-number { display:grid; place-items:center; width:27px; height:27px; flex-shrink:0; border:1px solid #cbd8df; border-radius:50%; font-size:10px; }
+.hierarchy-step.current .hierarchy-step-number { border-color:#ffdf32; color:#ffdf32; }
+.hierarchy-step>span:nth-child(2) { flex:1; min-width:0; }
+.hierarchy-step strong { font-size:12px; display:block; }
+.hierarchy-step small { font-size:10px; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; margin-top:5px; opacity:.86; }
+.hierarchy-step-arrow { color:#869ca9; margin-left:auto; }
+.hierarchy-step:last-child .hierarchy-step-arrow { display:none; }
+.drill-results { border-top:3px solid #168081; overflow:hidden; }
+.drill-results-header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:22px 24px 16px; }
+.drill-results-header h3 { margin:7px 0 0; font-size:23px; letter-spacing:-.4px; color:#1b394d; scroll-margin-top:20px; }
+.drill-results-header h3>span { display:inline-block; margin-left:10px; padding:3px 8px; border-radius:5px; background:#eaf2f5; font-size:12px; vertical-align:middle; color:#567585; }
+.drill-navigation { display:flex; align-items:center; gap:16px; }
+.drill-context { display:flex; flex-wrap:wrap; gap:25px; padding:0 24px; font-size:11px; color:#738795; }
+.drill-context b { color:#355b70; margin-right:4px; font-size:13px; }
+.drill-measure-note { font-size:11px; line-height:1.65; color:#647d8e; padding:0 24px 17px; margin:12px 0 0; }
+.drill-table-tools { display:flex; align-items:center; flex-wrap:wrap; gap:12px; padding:12px 24px; border-top:1px solid #e3eaf0; border-bottom:1px solid #e3eaf0; background:#f7fafc; }
+.drill-search-label { font-size:11px; font-weight:600; color:#446276; }
+.drill-search { width:240px; min-width:0; background:#fff; font-size:12px; }
+.drill-table-tools>span { margin-left:auto; font-size:11px; color:#6d8798; }
+.drill-grid-scroll { overflow:auto; max-height:550px; overscroll-behavior:contain; }
+.drill-grid-scroll .data-table { width:100%; min-width:670px; font-size:12px; }
+.drill-grid-scroll .data-table th { position:sticky; top:0; z-index:1; background:#f6f9fb; font-size:10px; padding:14px 20px; }
+.drill-grid-scroll .data-table td { padding:15px 20px; }
+.drill-row-label { border:0; background:transparent; font:inherit; text-align:left; padding:0; color:#234357; display:block; min-width:150px; max-width:390px; }
+button.drill-row-label { cursor:pointer; }
+.drill-row-label strong { font-size:12px; line-height:1.5; }
+.drill-row-label small { display:block; font-size:10px; line-height:1.6; color:#7a8e9c; margin-top:4px; }
+.drill-selectable { cursor:pointer; }
+.drill-selectable:hover { background:#f1f8f7; }
+.drill-selectable:hover .drill-row-label strong { text-decoration:underline; text-underline-offset:3px; }
+.drill-row-arrow { width:30px; color:#278887; font-size:18px; }
+.drill-pagination { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; padding:14px 24px; border-top:1px solid #e4ebf0; font-size:11px; color:#637e8f; }
+.drill-pagination>div { display:flex; align-items:center; gap:15px; }
+.drill-workspace button:disabled { cursor:default; opacity:.55; }
+.drill-empty,.drill-feedback { padding:36px 24px; text-align:center; color:#708595; }
+.drill-empty h4,.drill-feedback h3 { color:#2a4a5e; font-size:17px; }
+.drill-empty p,.drill-feedback p { font-size:12px; line-height:1.6; }
+.drill-notice { padding:12px 16px; border-left:3px solid #d7b835; background:#fffceb; border-radius:4px; color:#76652e; font-size:12px; margin:0; }
+.drill-workspace button:focus-visible,.drill-workspace input:focus-visible,.drill-workspace select:focus-visible,.drill-grid-scroll:focus-visible { outline:3px solid #c4ab27; outline-offset:2px; }
+@media(max-width:1100px) { .drill-dimension { padding:16px; gap:9px; } .hierarchy-step { padding:13px 10px; gap:8px; } .hierarchy-step-arrow { display:none; } .drill-olap-tag { display:none; } }
+@media(max-width:760px) { .drill-intro h3 { font-size:23px; } .drill-dimensions { gap:8px; } .drill-dimension { flex-direction:column; align-items:flex-start; padding:14px 11px; } .drill-dimension strong { font-size:13px; margin-bottom:4px; } .drill-dimension small { font-size:9px; } .drill-dimension>span:last-child { display:none; } .drill-journey { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); } .drill-results-header { padding:20px 16px 15px; align-items:flex-start; flex-direction:column; } .drill-navigation { width:100%; justify-content:space-between; } .drill-context { padding:0 16px; gap:12px; font-size:10px; } .drill-context b { font-size:12px; } .drill-measure-note { padding:0 16px 16px; } .drill-table-tools { padding:12px 16px; gap:8px; } .drill-search-label { width:100%; } .drill-search { width:100%; } .drill-table-tools>span { display:none; } .drill-pagination { padding:12px 16px; } .drill-role select { max-width:100%; } }
+
+.drill-workspace .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }

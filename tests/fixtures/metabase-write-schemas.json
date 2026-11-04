@@ -1,0 +1,573 @@
+{
+  "/api/dashboard/{id}": {
+    "type": "object",
+    "properties": {
+      "points_of_interest": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "enable_embedding": {
+        "oneOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "auto_apply_filters": {
+        "oneOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "width": {
+        "type": "string",
+        "enum": [
+          "fixed",
+          "full"
+        ]
+      },
+      "embedding_type": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "show_in_getting_started": {
+        "oneOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "position": {
+        "oneOf": [
+          {
+            "description": "value must be an integer greater than zero.",
+            "type": "integer",
+            "minimum": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "name": {
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "archived": {
+        "oneOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "collection_position": {
+        "oneOf": [
+          {
+            "description": "value must be an integer greater than zero.",
+            "type": "integer",
+            "minimum": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "embedding_params": {
+        "oneOf": [
+          {
+            "description": "value must be a valid embedding params map.",
+            "oneOf": [
+              {
+                "description": "Value must be a map.",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": {
+                      "enum": [
+                        "disabled",
+                        "enabled",
+                        "locked",
+                        "disabled",
+                        "enabled",
+                        "locked"
+                      ]
+                    }
+                  },
+                  {
+                    "description": "Value must be a map."
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "tabs": {
+        "oneOf": [
+          {
+            "description": "value must be seq of maps in which ids are unique",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "description": "value must be an integer.",
+                  "type": "integer"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "position": {
+                  "description": "value must be an integer greater or equal to than zero.",
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "id",
+                "name"
+              ],
+              "additionalProperties": false
+            }
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "collection_id": {
+        "oneOf": [
+          {
+            "description": "value must be an integer greater than zero.",
+            "type": "integer",
+            "minimum": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "cache_ttl": {
+        "oneOf": [
+          {
+            "description": "value must be an integer greater than zero.",
+            "type": "integer",
+            "minimum": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "caveats": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "parameters": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/metabase.parameters.schema.parameters"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "dashcards": {
+        "oneOf": [
+          {
+            "description": "value must be seq of maps in which ids are unique",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "inline_parameters": {
+                  "oneOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "visualization_settings": {
+                  "oneOf": [
+                    {
+                      "description": "Value must be a map.",
+                      "type": "object",
+                      "properties": {}
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "dashboard_tab_id": {
+                  "oneOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "parameter_mappings": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/metabase.parameters.schema.parameter-mappings"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "id": {
+                  "type": "integer"
+                },
+                "card_id": {
+                  "oneOf": [
+                    {
+                      "description": "value must be an integer greater than zero.",
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "size_x": {
+                  "description": "value must be an integer greater than zero.",
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "size_y": {
+                  "description": "value must be an integer greater than zero.",
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "col": {
+                  "description": "value must be an integer greater or equal to than zero.",
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "row": {
+                  "description": "value must be an integer greater or equal to than zero.",
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "series": {
+                  "oneOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "description": "value must be an integer greater than zero.",
+                            "type": "integer",
+                            "minimum": 1
+                          }
+                        },
+                        "required": [
+                          "id"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "action_id": {
+                  "oneOf": [
+                    {
+                      "description": "value must be an integer greater than zero.",
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "size_x",
+                "size_y",
+                "row",
+                "col"
+              ],
+              "additionalProperties": false
+            }
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "description": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "additionalProperties": false
+  },
+  "/api/card": {
+    "type": "object",
+    "properties": {
+      "visualization_settings": {
+        "description": "Value must be a map.",
+        "type": "object",
+        "properties": {}
+      },
+      "dashboard_tab_id": {
+        "oneOf": [
+          {
+            "description": "value must be an integer greater than zero.",
+            "type": "integer",
+            "minimum": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "entity_id": {
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "dataset_query": {
+        "$ref": "#/components/schemas/metabase.lib-be.schema.maybe-legacy-query"
+      },
+      "parameter_mappings": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/metabase.parameters.schema.parameter-mappings"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "name": {
+        "type": "string",
+        "minLength": 1
+      },
+      "collection_position": {
+        "oneOf": [
+          {
+            "description": "value must be an integer greater than zero.",
+            "type": "integer",
+            "minimum": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "result_metadata": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/metabase.lib.schema.metadata..card.result-metadata"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "source_card_id": {
+        "oneOf": [
+          {
+            "description": "value must be an integer greater than zero.",
+            "type": "integer",
+            "minimum": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "collection_id": {
+        "oneOf": [
+          {
+            "anyOf": [
+              {
+                "description": "value must be an integer greater than zero.",
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "description": "String must be a valid 21-character NanoID string.",
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_\\-]{21}$"
+              }
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "cache_ttl": {
+        "oneOf": [
+          {
+            "description": "value must be an integer greater than zero.",
+            "type": "integer",
+            "minimum": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "type": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/metabase.queries.schema..card.type"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "display": {
+        "type": "string",
+        "minLength": 1
+      },
+      "size": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "size_x": {
+                "description": "value must be an integer greater than zero.",
+                "type": "integer",
+                "minimum": 1
+              },
+              "size_y": {
+                "description": "value must be an integer greater than zero.",
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "size_x",
+              "size_y"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "parameters": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/metabase.parameters.schema.parameters"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "description": {
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "dashboard_id": {
+        "oneOf": [
+          {
+            "description": "value must be an integer greater than zero.",
+            "type": "integer",
+            "minimum": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "name",
+      "dataset_query",
+      "display",
+      "visualization_settings"
+    ],
+    "additionalProperties": false
+  }
+}

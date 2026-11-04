@@ -1,0 +1,115 @@
+name: ${COMPOSE_PROJECT_NAME:-tdf-standard}
+
+x-app: &app
+  image: ${COMPOSE_PROJECT_NAME:-tdf-standard}-portal:local
+  init: true
+  environment: &app-env
+    PORTAL_PUBLIC_URL: http://127.0.0.1:${PORTAL_PORT:-8000}
+    METABASE_PUBLIC_URL: http://127.0.0.1:${METABASE_PORT:-3000}
+    METABASE_INTERNAL_URL: http://metabase:3000
+    ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@tdf.local}
+
+services:
+  setup:
+    <<: *app
+    profiles: [tools]
+    user: ${LOCAL_UID:-1000}:${LOCAL_GID:-1000}
+    command: [python, -m, deploy.runtime]
+    volumes:
+      - ./.runtime:/app/runtime
+
+  postgres:
+    image: postgres:18.6-bookworm@sha256:5c4783a8cc3f0074912164f94dfa1be4e043438f0f707cf968d7af9a0d31a2c8
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tdf_admin
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --data-checksums
+      TZ: UTC
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./deploy/init:/docker-entrypoint-initdb.d:ro
+    secrets: [postgres_password, metabase_password, owner_password, reader_password]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U tdf_admin -d postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    logging: &logging
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}
+
+  metabase:
+    image: metabase/metabase:v0.65.2.x@sha256:cffc1937946750006912d286e4672bb8027c67ac3705dd29ada7bc77693099eb
+    restart: unless-stopped
+    depends_on:
+      postgres: {condition: service_healthy}
+    entrypoint: [/bin/sh, /opt/tdf/metabase-entry.sh]
+    volumes:
+      - ./deploy/metabase-entry.sh:/opt/tdf/metabase-entry.sh:ro
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_HOST: postgres
+      MB_DB_PORT: '5432'
+      MB_DB_DBNAME: metabase_app
+      MB_DB_USER: metabase_app
+      MB_DB_PASS_FILE: /run/secrets/metabase_password
+      MB_SITE_URL: http://127.0.0.1:${METABASE_PORT:-3000}
+      MB_ANON_TRACKING_ENABLED: 'false'
+      MB_CHECK_FOR_UPDATES: 'false'
+      JAVA_TIMEZONE: UTC
+      JAVA_OPTS: -Xms256m -Xmx2g
+    ports: ['127.0.0.1:${METABASE_PORT:-3000}:3000']
+    secrets: [metabase_password, metabase_encryption_key]
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://localhost:3000/api/health]
+      interval: 10s
+      timeout: 10s
+      retries: 36
+      start_period: 180s
+    logging: *logging
+
+  bootstrap:
+    <<: *app
+    profiles: [tools]
+    user: ${LOCAL_UID:-1000}:${LOCAL_GID:-1000}
+    command: [python, -m, deploy.bootstrap]
+    depends_on:
+      postgres: {condition: service_healthy}
+      metabase: {condition: service_healthy}
+    volumes:
+      - ./.runtime:/app/runtime
+
+  portal:
+    <<: *app
+    build: .
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    depends_on:
+      postgres: {condition: service_healthy}
+      metabase: {condition: service_healthy}
+    volumes:
+      - ./.runtime/state:/app/runtime:ro
+    secrets: [reader_database_url, embedding_secret]
+    ports: ['127.0.0.1:${PORTAL_PORT:-8000}:8000']
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5)"]
+      interval: 10s
+      timeout: 6s
+      retries: 12
+    logging: *logging
+
+volumes:
+  postgres_data:
+
+secrets:
+  postgres_password: {file: ./.runtime/secrets/postgres_password}
+  metabase_password: {file: ./.runtime/secrets/metabase_password}
+  owner_password: {file: ./.runtime/secrets/owner_password}
+  reader_password: {file: ./.runtime/secrets/reader_password}
+  metabase_encryption_key: {file: ./.runtime/secrets/metabase_encryption_key}
+  embedding_secret: {file: ./.runtime/secrets/embedding_secret}
+  reader_database_url: {file: ./.runtime/secrets/reader_database_url}

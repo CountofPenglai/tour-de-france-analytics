@@ -1,0 +1,21 @@
+const assert = require('node:assert/strict');
+const { raceSummary, stageChartMarkup } = require('../web/static/appearance.js');
+assert.equal(raceSummary(null), null, 'missing metadata must not masquerade as zero riders');
+assert.equal(raceSummary({teams:[], riders:[], stages:[]}), null);
+assert.deepEqual(raceSummary({teams:[{}],riders:[{finished_race_flag:1},{finished_race_flag:0}],stages:[{distance_km:12.5},{distance_km:10}]}),{starters:2,finishers:1,teams:1,stages:2,distance:22.5});
+const html = stageChartMarkup([{stage_id:5,finisher_count:179,stage_type:'mountain',route_description:'<script>alert(1)</script>'}]);
+assert.match(html,/Stage 5: 179 finishers/);
+assert.match(html,/data-stage-id="5"/);
+assert.ok(!html.includes('<script>'));
+assert.match(stageChartMarkup([]),/No stages match/);
+assert.match(stageChartMarkup([{stage_id:1,finisher_count:null}]),/No stage finisher counts/);
+console.log('Appearance: 7 assertions passed');
+
+const appearance = require('../web/static/appearance.js');
+assert.equal(appearance.chartTabForModule('rider_standings').key,'tab_2_classifications');
+assert.equal(appearance.chartTabForModule('team_standings').key,'tab_3_performance');
+assert.equal(appearance.chartTabForModule('country_participation').index,4);
+assert.equal(appearance.chartTabForModule('gc_evolution').index,5);
+assert.equal(appearance.chartTabForModule('stage_summary').index,1);
+assert.equal(appearance.chartTabForModule('invalid').index,1);
+console.log('Chart navigation: 6 assertions passed');

@@ -1,0 +1,945 @@
+{
+  "/api/dashboard": {
+    "post": {
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "cache_ttl": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collection_id": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collection_position": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parameters": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "note": "nested schema omitted; refer to exact OpenAPI when needed"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "/api/dashboard/{id}": {
+    "put": {
+      "required": null,
+      "properties": {
+        "points_of_interest": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "enable_embedding": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "auto_apply_filters": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "width": {
+          "type": "string",
+          "enum": [
+            "fixed",
+            "full"
+          ]
+        },
+        "embedding_type": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "show_in_getting_started": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "position": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "archived": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collection_position": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "embedding_params": {
+          "oneOf": [
+            {
+              "oneOf": [
+                {
+                  "oneOf": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  }
+                },
+                {
+                  "type": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tabs": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  "name": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  "position": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  }
+                },
+                "required": [
+                  {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  }
+                ],
+                "additionalProperties": false
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collection_id": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cache_ttl": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "caveats": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parameters": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "note": "nested schema omitted; refer to exact OpenAPI when needed"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dashcards": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "inline_parameters": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  "visualization_settings": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  "dashboard_tab_id": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  "parameter_mappings": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  "id": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  "card_id": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  "size_x": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  "size_y": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  "col": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  "row": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  "series": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  "action_id": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  }
+                },
+                "required": [
+                  {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  }
+                ],
+                "additionalProperties": false
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "/api/card": {
+    "post": {
+      "required": [
+        "name",
+        "dataset_query",
+        "display",
+        "visualization_settings"
+      ],
+      "properties": {
+        "visualization_settings": {
+          "type": "object",
+          "properties": {}
+        },
+        "dashboard_tab_id": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "entity_id": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dataset_query": {
+          "allOf": [
+            {
+              "type": {
+                "note": "nested schema omitted; refer to exact OpenAPI when needed"
+              },
+              "properties": {
+                "note": "nested schema omitted; refer to exact OpenAPI when needed"
+              },
+              "required": {
+                "note": "nested schema omitted; refer to exact OpenAPI when needed"
+              },
+              "additionalProperties": {
+                "note": "nested schema omitted; refer to exact OpenAPI when needed"
+              }
+            },
+            {
+              "note": "nested schema omitted; refer to exact OpenAPI when needed"
+            },
+            {
+              "note": "nested schema omitted; refer to exact OpenAPI when needed"
+            },
+            {
+              "allOf": {
+                "note": "nested schema omitted; refer to exact OpenAPI when needed"
+              }
+            }
+          ]
+        },
+        "parameter_mappings": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "note": "nested schema omitted; refer to exact OpenAPI when needed"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "collection_position": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "result_metadata": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "note": "nested schema omitted; refer to exact OpenAPI when needed"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_card_id": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collection_id": {
+          "oneOf": [
+            {
+              "anyOf": [
+                {
+                  "type": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  "minimum": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  }
+                },
+                {
+                  "type": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  "pattern": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cache_ttl": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "type": {
+          "oneOf": [
+            {
+              "type": {
+                "note": "nested schema omitted; refer to exact OpenAPI when needed"
+              },
+              "enum": {
+                "note": "nested schema omitted; refer to exact OpenAPI when needed"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "display": {
+          "type": "string",
+          "minLength": 1
+        },
+        "size": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "size_x": {
+                  "type": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  "minimum": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  }
+                },
+                "size_y": {
+                  "type": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  "minimum": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  }
+                }
+              },
+              "required": [
+                "size_x",
+                "size_y"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parameters": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "note": "nested schema omitted; refer to exact OpenAPI when needed"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dashboard_id": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "/api/card/{id}": {
+    "put": {
+      "required": null,
+      "properties": {
+        "enable_embedding": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "visualization_settings": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {}
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dashboard_tab_id": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collection_preview": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dataset_query": {
+          "oneOf": [
+            {
+              "allOf": {
+                "note": "nested schema omitted; refer to exact OpenAPI when needed"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parameter_mappings": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "note": "nested schema omitted; refer to exact OpenAPI when needed"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "embedding_type": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "archived": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collection_position": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "embedding_params": {
+          "oneOf": [
+            {
+              "oneOf": [
+                {
+                  "oneOf": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  }
+                },
+                {
+                  "type": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "result_metadata": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "note": "nested schema omitted; refer to exact OpenAPI when needed"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collection_id": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cache_ttl": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "type": {
+          "oneOf": [
+            {
+              "type": {
+                "note": "nested schema omitted; refer to exact OpenAPI when needed"
+              },
+              "enum": {
+                "note": "nested schema omitted; refer to exact OpenAPI when needed"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "display": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parameters": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "note": "nested schema omitted; refer to exact OpenAPI when needed"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dashboard_id": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "/api/collection": {
+    "post": {
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "authority_level": {
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "official"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "namespace": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parent_id": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "/api/database/{id}/sync_schema": {
+    "post": {
+      "required": null,
+      "properties": {}
+    }
+  },
+  "/api/setting/{key}": {
+    "put": {
+      "required": [
+        "value"
+      ],
+      "properties": {
+        "value": {
+          "oneOf": [
+            {
+              "anyOf": [
+                {
+                  "type": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  }
+                },
+                {
+                  "type": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  }
+                },
+                {
+                  "type": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  }
+                },
+                {
+                  "type": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  },
+                  "items": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  }
+                },
+                {
+                  "oneOf": {
+                    "note": "nested schema omitted; refer to exact OpenAPI when needed"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
