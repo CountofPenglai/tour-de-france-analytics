@@ -44,6 +44,8 @@ def initialize_database() -> None:
         else:
             print('Existing race data retained.', flush=True)
         conn.execute(sql_text((ROOT / 'sql/003_analytics.sql').read_text()))
+        for name in ('004_gc_reports.sql', '005_team_terrain_reports.sql', '006_country_reports.sql'):
+            conn.execute(sql_text((ROOT / 'sql' / name).read_text()))
         for name in ('verify_load.sql', 'verify_analytics.sql'):
             conn.execute(sql_text((ROOT / 'sql' / name).read_text()))
         print('Database and analytical checks passed.', flush=True)

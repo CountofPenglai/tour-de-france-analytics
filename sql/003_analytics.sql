@@ -12,6 +12,16 @@
 
 CREATE SCHEMA IF NOT EXISTS dw;
 
+-- A stage's recorded placing and its shortest elapsed time can differ.
+-- A single reference is needed for gaps and the summary's single winner slot.
+-- For joint firsts, use the lowest raw time then rider key, without changing any placings.
+CREATE OR REPLACE VIEW dw.stage_winner_reference AS
+SELECT DISTINCT ON (stage_key) stage_key, rider_key, team_key,
+       finish_time_seconds, adjusted_time_seconds
+FROM dw.fact_results
+WHERE finish_rank = 1
+ORDER BY stage_key, finish_time_seconds, rider_key;
+
 -- -----------------------------------------------------------------------------
 -- 1. dw.rider_standings(p_filters jsonb DEFAULT '{}'::jsonb)
 -- -----------------------------------------------------------------------------
@@ -701,9 +711,7 @@ BEGIN
             fr.adjusted_time_seconds,
             fr.stage_points_proxy,
             fr.kom_points_proxy,
-            COUNT(*) OVER (PARTITION BY fr.stage_key)::integer AS stage_finisher_count,
-            MIN(fr.finish_time_seconds) OVER (PARTITION BY fr.stage_key)::integer AS min_finish_seconds,
-            MIN(fr.adjusted_time_seconds) OVER (PARTITION BY fr.stage_key)::integer AS min_adjusted_seconds
+            COUNT(*) OVER (PARTITION BY fr.stage_key)::integer AS stage_finisher_count
         FROM dw.fact_results fr
     )
     SELECT
@@ -729,8 +737,8 @@ BEGIN
         gsm.time_bonus_seconds::integer,
         gsm.time_penalty_seconds::integer,
         gsm.adjusted_time_seconds::integer,
-        (gsm.finish_time_seconds - gsm.min_finish_seconds)::integer AS gap_seconds,
-        (gsm.adjusted_time_seconds - gsm.min_adjusted_seconds)::integer AS adjusted_gap_seconds,
+        (gsm.finish_time_seconds - winner.finish_time_seconds)::integer AS gap_seconds,
+        (gsm.adjusted_time_seconds - winner.adjusted_time_seconds)::integer AS adjusted_gap_seconds,
         gsm.stage_points_proxy::integer,
         gsm.kom_points_proxy::integer,
         COALESCE(
@@ -741,6 +749,7 @@ BEGIN
         fp.exit_flag::integer,
         (CASE WHEN fp.finished_race_flag = 1 THEN 'finished' ELSE 'exited' END)::text AS participation_status
     FROM global_stage_metrics gsm
+    LEFT JOIN dw.stage_winner_reference winner ON winner.stage_key = gsm.stage_key
     JOIN dw.dim_rider dr ON dr.rider_key = gsm.rider_key
     JOIN dw.dim_team dt ON dt.team_key = gsm.team_key
     JOIN dw.dim_stage ds ON ds.stage_key = gsm.stage_key
@@ -841,26 +850,9 @@ BEGIN
         SELECT
             fr.stage_key,
             MIN(fr.date_key)::integer AS date_key,
-            COUNT(*)::integer AS finisher_count,
-            MIN(fr.finish_time_seconds)::integer AS winning_finish_time_seconds,
-            MIN(fr.adjusted_time_seconds)::integer AS winning_adjusted_time_seconds
+            COUNT(*)::integer AS finisher_count
         FROM dw.fact_results fr
         GROUP BY fr.stage_key
-    ),
-    stage_winner AS (
-        SELECT
-            fr.stage_key,
-            dr.rider_key AS winner_rider_key,
-            dr.bib_number AS winner_bib_number,
-            dr.rider_name AS winner_rider_name,
-            dt.team_name AS winner_team_name,
-            ROW_NUMBER() OVER (
-                PARTITION BY fr.stage_key
-                ORDER BY fr.finish_rank ASC, fr.finish_time_seconds ASC, dr.rider_key ASC
-            ) AS rn
-        FROM dw.fact_results fr
-        JOIN dw.dim_rider dr ON dr.rider_key = fr.rider_key
-        JOIN dw.dim_team dt ON dt.team_key = fr.team_key
     )
     SELECT
         ds.stage_key::integer,
@@ -879,16 +871,18 @@ BEGIN
         ds.finish_country_name::text,
         (ds.start_location_name || ' (' || ds.start_country_code || ') -> ' || ds.finish_location_name || ' (' || ds.finish_country_code || ')')::text AS route_description,
         sa.finisher_count::integer,
-        sw.winner_rider_key::integer,
-        sw.winner_bib_number::integer,
-        sw.winner_rider_name::text,
-        sw.winner_team_name::text,
-        sa.winning_finish_time_seconds::integer,
-        sa.winning_adjusted_time_seconds::integer
+        sw.rider_key::integer,
+        dr.bib_number::integer,
+        dr.rider_name::text,
+        dt.team_name::text,
+        sw.finish_time_seconds::integer,
+        sw.adjusted_time_seconds::integer
     FROM dw.dim_stage ds
     JOIN stage_agg sa ON sa.stage_key = ds.stage_key
     JOIN dw.dim_date dd ON dd.date_key = sa.date_key
-    JOIN stage_winner sw ON sw.stage_key = ds.stage_key AND sw.rn = 1
+    LEFT JOIN dw.stage_winner_reference sw ON sw.stage_key = ds.stage_key
+    LEFT JOIN dw.dim_rider dr ON dr.rider_key = sw.rider_key
+    LEFT JOIN dw.dim_team dt ON dt.team_key = sw.team_key
     WHERE (v_stage_scope <> 'as_of' OR ds.stage_order <= v_as_of_stage)
       AND (v_stage_ids IS NULL OR ds.stage_id = ANY(v_stage_ids))
       AND (v_stage_types IS NULL OR ds.stage_type = ANY(v_stage_types))
@@ -1123,11 +1117,12 @@ BEGIN
             ) AS stage_rank_pct,
             (
                 CASE WHEN v_time_basis = 'finish'
-                     THEN fr.finish_time_seconds - MIN(fr.finish_time_seconds) OVER (PARTITION BY fr.stage_key)
-                     ELSE fr.adjusted_time_seconds - MIN(fr.adjusted_time_seconds) OVER (PARTITION BY fr.stage_key)
+                     THEN fr.finish_time_seconds - winner.finish_time_seconds
+                     ELSE fr.adjusted_time_seconds - winner.adjusted_time_seconds
                 END
             ) AS stage_gap_sec
         FROM dw.fact_results fr
+        LEFT JOIN dw.stage_winner_reference winner ON winner.stage_key = fr.stage_key
     )
     SELECT
         dr.rider_key::integer,
@@ -1513,12 +1508,8 @@ BEGIN
                      ELSE fr.adjusted_time_seconds
                 END
             )::integer AS stage_seconds,
-            MIN(
-                CASE WHEN v_time_basis = 'finish'
-                     THEN fr.finish_time_seconds
-                     ELSE fr.adjusted_time_seconds
-                END
-            ) OVER (PARTITION BY fr.stage_key)::integer AS stage_winner_seconds,
+            CASE WHEN v_time_basis = 'finish' THEN winner.finish_time_seconds
+                 ELSE winner.adjusted_time_seconds END AS stage_winner_seconds,
             fr.time_bonus_seconds,
             fr.time_penalty_seconds,
             (fr.time_penalty_seconds - fr.time_bonus_seconds)::integer AS net_bonus_penalty_seconds,
@@ -1553,6 +1544,7 @@ BEGIN
                 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
             )::integer AS cumulative_net_bonus_penalty_seconds
         FROM dw.fact_results fr
+        LEFT JOIN dw.stage_winner_reference winner ON winner.stage_key = fr.stage_key
         JOIN dw.dim_stage ds ON ds.stage_key = fr.stage_key
     ),
     -- Only riders who completed all stages 1..S are eligible at cutoff S
@@ -1705,7 +1697,7 @@ DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'tdf_reader') THEN
         GRANT USAGE ON SCHEMA dw TO tdf_reader;
-        GRANT SELECT ON TABLE dw.olap_rollup TO tdf_reader;
+        GRANT SELECT ON TABLE dw.olap_rollup, dw.stage_winner_reference TO tdf_reader;
         GRANT EXECUTE ON FUNCTION dw.rider_standings(jsonb) TO tdf_reader;
         GRANT EXECUTE ON FUNCTION dw.team_standings(jsonb) TO tdf_reader;
         GRANT EXECUTE ON FUNCTION dw.rider_stage_results(jsonb) TO tdf_reader;

@@ -41,7 +41,7 @@ The launcher builds the portal, generates installation-specific credentials, ini
 | --- | --- | --- |
 | Dashboard | [http://127.0.0.1:8000](http://127.0.0.1:8000) | Opens directly; embedded analysis needs no separate login |
 | Native Metabase | [http://127.0.0.1:3000](http://127.0.0.1:3000) | Log in, then open **Project 3 OLAP**; the portal also links to the generated dashboard |
-| API reference | [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) | Interactive FastAPI documentation |
+| API reference | [http://127.0.0.1:8000/api/docs](http://127.0.0.1:8000/api/docs) | Interactive FastAPI documentation |
 
 The generated Metabase email and password are in **`.runtime/admin-credentials.json`**. Keep this file private. Dashboard, card, and tab IDs are assigned by the new installation; no developer account or database dump is included.
 
@@ -49,16 +49,15 @@ The generated Metabase email and password are in **`.runtime/admin-credentials.j
 
 | Area | Main functions |
 | --- | --- |
-| Race overview | Race context, stage profiles, standings previews, and embedded Metabase analysis |
-| Classifications | General Classification, Young Rider, Points Proxy, KOM Proxy, mountain-time rankings, and two team aggregation methods |
-| Rider and team performance | Rider results, team standings, terrain comparison, roster contributions, and stage-by-stage detail |
-| Country participation | Compare rider nationality with team registration; inspect country members and completion rates |
-| Stage analysis | Stage routes, terrain, distance, finisher counts, times, and individual results |
-| Insights | Three visual stories: **terrain fit for roster selection**, **team depth and repeated sporting visibility**, and **decisive stages for race planning**; team management is the primary perspective, with sponsorship relevance as a secondary interpretation |
-| Drill Down | Choose Team, Terrain, or Country, then navigate from aggregate results to teams, riders, and individual stages; country paths distinguish registration from nationality |
-| Explore | Full analytical tables, sorting/pagination where available, detail views, and direct links from chart/table selections |
+| Overview | Starters and finishers, winning margin, and the stage-finisher trend. Select a rider or stage for the supporting results. |
+| Classifications | Compare GC, youth and mountain-time ranks in one row. Trace the selected rider’s largest daily change in GC position. |
+| Riders & Teams | Compare roster depth, top-ten appearances and stage coverage. Follow the contributions to riders and individual days, then inspect team standings under either top-three rule. |
+| Stages & Routes | Sort for the longest route, list time trials, or inspect a stage’s leading finishers and each team’s share of the top ten. |
+| Country Participation | Compare registration and nationality counts, best final GC rank, wins, and podiums. Open the relevant roster or medal-winning results. |
+| Drill Down | Choose Team, Terrain or Country and a measure. Follow the hierarchy to the contributing results and return to the original comparison. |
+| Exploratory Analysis | Compare terrain speeds and mountain podiums in **Terrain fit**, follow cumulative time and reshuffles in **Decisive stages**, and replay GC with or without bonuses and penalties in **Time rules**. |
 
-Filters support final-race, as-of-stage, and selected-stage scopes; terrain, team, rider, and young-rider selections; finish versus adjusted time; overall versus filtered-group ranks; and per-stage top-three versus cumulative top-three team methods. Applied filters remain available when navigating detail views. The native Metabase dashboard contains **30 displayed analytical cards plus one supporting question**, across five tabs.
+Filters support final-race, as-of-stage, and selected-stage scopes; terrain, team, rider, and young-rider selections; finish versus adjusted time; overall versus filtered-group ranks; and per-stage top-three versus cumulative top-three team methods. Applied filters remain available when navigating detail views. The native Metabase dashboard contains **33 displayed analytical cards plus one supporting question**, across five tabs.
 
 ### Reading the results
 
@@ -120,7 +119,7 @@ Browser ──> FastAPI portal ──> PostgreSQL: tour_de_france
 Three source CSVs ──> validated ETL ──> tdf (normalized) + dw (warehouse)
 ```
 
-The warehouse has **two fact tables with distinct grains**—one result per rider per completed stage and one participation record per rider—and **five shared dimensions**. This prevents double-counting entrants when aggregating stage results. Eight shared analytical SQL functions keep Metabase and portal calculations aligned.
+The warehouse has **two fact tables with distinct grains**—one result per rider per completed stage and one participation record per rider—and **five shared dimensions**. This prevents double-counting entrants when aggregating stage results. Eight core SQL functions and seven report functions supply the portal and Metabase with shared race calculations.
 
 The standard package contains source code, CSVs, SQL, assets, and initialization scripts. It **does not contain Docker image layers, a live database, credentials, or local Git history**. The first build downloads official images and pinned Python dependencies; later operation uses the local images and volumes.
 
@@ -188,7 +187,7 @@ Further references: [star schema](docs/star-schema.md), [Metabase dashboard](doc
 - **Authentication failure after changing the Metabase login:** synchronize the saved email/password in `.runtime/admin-credentials.json` with that account, then rerun the launcher. Do not rotate database or encryption keys.
 - **Missing private files after a move:** restore the original `.runtime/` directory with the corresponding database volume. The initializer refuses to silently replace missing keys in an existing installation.
 - **Blank or stale embedded view:** check Metabase health, rerun the launcher after port changes, and reload the browser. Use the native Metabase link or Explore while inspecting the issue.
-- **Custom content changed after initialization:** the provided 31 questions and dashboard are managed by the provisioner. Keep personal copies in a separate collection.
+- **Custom content changed after initialization:** the provided 34 questions and dashboard are managed by the provisioner. Keep personal copies in a separate collection.
 
 ## Preparing a GitHub repository
 

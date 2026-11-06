@@ -344,9 +344,9 @@ class DashboardProvisionerTest(unittest.TestCase):
         self.assertTrue(set(col_payload.keys()).issubset(allowed_col_keys))
         self.assertEqual(col_payload["name"], "Project 3 OLAP")
 
-        # 2. Card payloads (30 visible dashboard cards + 1 hidden pivot source question = 31 total)
-        self.assertEqual(len(pd.DASHBOARD_CARD_SPECS), 30)
-        self.assertEqual(len(bundle["cards"]), 31)
+        # 2. Card payloads (33 visible dashboard cards + 1 hidden pivot source question = 34 total)
+        self.assertEqual(len(pd.DASHBOARD_CARD_SPECS), 33)
+        self.assertEqual(len(bundle["cards"]), 34)
 
         by_slug = {c["slug"]: c for c in bundle["cards"]}
         src_entry = by_slug["insight_rider_specialisation_pivot_source"]
@@ -557,6 +557,29 @@ class DashboardProvisionerTest(unittest.TestCase):
                 frag,
             )
 
+    def test_analytical_reading_order_and_report_grains(self) -> None:
+        cards = {c.slug: c for c in pd.DASHBOARD_CARD_SPECS}
+        depth = cards["insight_team_depth_table"]
+        burden = cards["perf_team_member_contributions"]
+        self.assertEqual((depth.tab_slug, depth.row), ("tab_performance", 0))
+        self.assertLess(depth.row, burden.row)
+        self.assertLess(burden.row, cards["perf_team_stage_top3_table"].row)
+        self.assertIn("rider_burden_seconds", burden.sql_query)
+        self.assertIn("PARTITION BY", burden.sql_query)
+        self.assertIn("adjusted", burden.description.lower())
+        self.assertIn("mountain_gc_rank", cards["class_gc_table"].sql_query)
+        self.assertIn("best_gc_riders", cards["country_full_universe_table"].sql_query)
+        self.assertIn("stage_types", cards["country_full_universe_table"].filter_keys)
+        self.assertIn("podium_count", cards["insight_terrain_speed"].sql_query)
+        self.assertIn("winning_margin", cards["insight_time_rules"].sql_query)
+        # A moved pre-existing card must keep a unique, unobstructed place on its destination tab.
+        for i, card in enumerate(pd.DASHBOARD_CARD_SPECS):
+            for other in pd.DASHBOARD_CARD_SPECS[i+1:]:
+                if card.tab_slug == other.tab_slug:
+                    self.assertFalse(card.row < other.row + other.size_y and other.row < card.row + card.size_y
+                        and card.col < other.col + other.size_x and other.col < card.col + card.size_x,
+                        f"Overlapping cards: {card.slug} and {other.slug}")
+
     def test_shared_sql_function_and_view_references(self) -> None:
         """Verify all 8 dw table functions and dw.olap_rollup view are referenced and exist in 003_analytics.sql."""
         expected_objects = {
@@ -568,7 +591,8 @@ class DashboardProvisionerTest(unittest.TestCase):
             "dw.rider_specialisation",
             "dw.team_depth",
             "dw.gc_evolution",
-            "dw.olap_rollup",
+            "dw.olap_rollup", "dw.gc_comparison", "dw.gc_time_rules",
+            "dw.team_roster_performance", "dw.terrain_performance", "dw.country_outcomes",
         }
         used_objects = set()
         for spec in pd.CARD_SPECS:
@@ -578,7 +602,8 @@ class DashboardProvisionerTest(unittest.TestCase):
         self.assertEqual(used_objects, expected_objects)
 
         if ANALYTICS_SQL_PATH.exists():
-            sql_text = ANALYTICS_SQL_PATH.read_text(encoding="utf-8")
+            sql_text = "\n".join(p.read_text(encoding="utf-8") for p in sorted(
+                ANALYTICS_SQL_PATH.parent.glob("0*.sql")))
             for obj in expected_objects:
                 self.assertIn(obj, sql_text, f"Missing {obj} in sql/003_analytics.sql")
 
@@ -769,7 +794,7 @@ class DashboardProvisionerTest(unittest.TestCase):
             second = provisioner.provision()
             self.assertEqual(first['dashboard_id'], 2)
             self.assertEqual(first['collection_id'], 5)
-            self.assertEqual(first['card_count'], 31)
+            self.assertEqual(first['card_count'], 34)
             self.assertEqual(first, second)
 
     def test_idempotent_upgrade_preserves_deployed_state_and_embedding(self) -> None:
@@ -791,19 +816,26 @@ class DashboardProvisionerTest(unittest.TestCase):
             res1 = provisioner.provision()
             self.assertEqual(res1["collection_id"], 6)
             self.assertEqual(res1["dashboard_id"], 3)
-            self.assertEqual(res1["card_count"], 31)
-            self.assertEqual(res1["dashcard_count"], 32)  # 2 captions + 30 dashboard cards
+            self.assertEqual(res1["card_count"], 34)
+            self.assertEqual(res1["dashcard_count"], 35)  # 2 captions + 33 dashboard cards
 
             post_creates = [
                 c for c in server.calls
                 if c[0] == "POST" and c[1] in ("/api/collection", "/api/card", "/api/dashboard")
             ]
-            self.assertEqual(post_creates, [])
+            self.assertEqual([c[1] for c in post_creates], ["/api/card"] * 3)
 
             updated_state = json.loads(state_path.read_text(encoding="utf-8"))
-            self.assertEqual(updated_state["cards"], deployed_state["cards"])
+            for key, value in deployed_state["cards"].items():
+                self.assertEqual(updated_state["cards"][key], value)
             self.assertEqual(updated_state["tabs"], deployed_state["tabs"])
-            self.assertEqual(updated_state["dashcards"], deployed_state["dashcards"])
+            for key, value in deployed_state["dashcards"].items():
+                self.assertEqual(updated_state["dashcards"][key], value)
+            server.calls.clear()
+            self.assertEqual(provisioner.provision(), res1)
+            self.assertFalse(any(call[0] == "POST" and call[1] in
+                ("/api/card", "/api/collection", "/api/dashboard") for call in server.calls))
+            self.assertEqual(json.loads(state_path.read_text()), updated_state)
 
             # Verify live card 46 and dashcard 44 have table.columns and merged column_settings
             card_46_vis = server.cards[46]["visualization_settings"]
@@ -843,9 +875,9 @@ class DashboardProvisionerTest(unittest.TestCase):
             state_path2.write_text(json.dumps(pre_pivot_state), encoding="utf-8")
             provisioner2 = pd.DashboardProvisioner(client=client2, database_id=2, state_path=state_path2)
             res_upgrade = provisioner2.provision()
-            self.assertEqual(res_upgrade["card_count"], 31)
+            self.assertEqual(res_upgrade["card_count"], 34)
             post_cards_upgrade = [c for c in server2.calls if c[0] == "POST" and c[1] == "/api/card"]
-            self.assertEqual(len(post_cards_upgrade), 2)
+            self.assertEqual(len(post_cards_upgrade), 5)
 
     def test_credentials_resolution_and_redaction(self) -> None:
         """Verify credential parsing from JSON/.env/token files and strict redaction."""

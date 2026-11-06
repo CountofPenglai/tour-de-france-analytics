@@ -9,6 +9,22 @@
 \set ON_ERROR_STOP on
 
 -- -----------------------------------------------------------------------------
+-- Winner reference must follow recorded rank, even when a later placing was timed faster.
+DO $$
+DECLARE
+    winner record;
+    detail record;
+BEGIN
+    SELECT * INTO STRICT winner FROM dw.stage_summary('{"stage_ids":[21]}');
+    SELECT * INTO STRICT detail FROM dw.rider_stage_results(jsonb_build_object(
+        'stage_ids', jsonb_build_array(21), 'rider_keys', jsonb_build_array(winner.winner_rider_key)));
+    ASSERT detail.finish_rank = 1 AND detail.finish_time_seconds = 11250;
+    ASSERT detail.gap_seconds = 0 AND detail.adjusted_gap_seconds = 0;
+    ASSERT winner.winning_finish_time_seconds = detail.finish_time_seconds;
+    ASSERT winner.winning_adjusted_time_seconds = detail.adjusted_time_seconds;
+    ASSERT EXISTS (SELECT 1 FROM dw.rider_stage_results('{"stage_ids":[21]}') WHERE gap_seconds = -9);
+END $$;
+
 -- 1. Source-control GC winner (bib 1, total_seconds = 277349) & 160 finishers
 -- -----------------------------------------------------------------------------
 DO $$

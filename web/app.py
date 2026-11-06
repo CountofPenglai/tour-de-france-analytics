@@ -384,8 +384,8 @@ FUNCTION_UNITS: dict[str, dict[str, str]] = {
         "time_bonus_seconds": "seconds (time bonus subtracted in adjusted time)",
         "time_penalty_seconds": "seconds (time penalty added in adjusted time)",
         "adjusted_time_seconds": "seconds (finish_time_seconds - time_bonus_seconds + time_penalty_seconds)",
-        "gap_seconds": "seconds behind raw stage winner",
-        "adjusted_gap_seconds": "seconds behind adjusted stage winner",
+        "gap_seconds": "raw seconds relative to the recorded stage winner",
+        "adjusted_gap_seconds": "adjusted seconds relative to the recorded stage winner",
         "stage_points_proxy": "proxy points 0..50 (derived from stage finish rank & terrain)",
         "kom_points_proxy": "proxy points 0..20 (derived from mountain/hilly finish rank)",
         "rank_percentile": "percentage 0.00..100.00 across all finishers of the stage",
@@ -393,8 +393,8 @@ FUNCTION_UNITS: dict[str, dict[str, str]] = {
     "stage_summary": {
         "distance_km": "kilometres (numeric(6,2), one row per stage, never duplicated)",
         "finisher_count": "riders finishing the stage (count)",
-        "winning_finish_time_seconds": "seconds (minimum raw stage finish time)",
-        "winning_adjusted_time_seconds": "seconds (minimum adjusted stage finish time)",
+        "winning_finish_time_seconds": "seconds (recorded stage winner, raw time)",
+        "winning_adjusted_time_seconds": "seconds (recorded stage winner, adjusted time)",
     },
     "country_participation": {
         "rider_count": "participating riders of this nationality (count; excludes UNK row)",
@@ -429,7 +429,7 @@ FUNCTION_UNITS: dict[str, dict[str, str]] = {
         "cumulative_rank": "ordinal contemporaneous rank at stage S via SQL RANK()",
         "cumulative_gap_seconds": "seconds behind contemporaneous leader at stage S",
         "stage_net_change_seconds": "seconds gained (< 0) or lost (> 0) vs leader on stage S",
-        "stage_gap_seconds": "seconds behind single-stage winner on stage S",
+        "stage_gap_seconds": "signed seconds relative to the recorded stage winner, using the selected time basis",
         "time_bonus_seconds": "seconds (stage S bonus)",
         "time_penalty_seconds": "seconds (stage S penalty)",
         "net_bonus_penalty_seconds": "seconds (time_penalty_seconds - time_bonus_seconds on stage S)",
@@ -1271,6 +1271,26 @@ def create_app(
             "units": FUNCTION_UNITS.get(name, {}),
             "rows": rows,
         }
+
+    # These named reports are shared by the analytical pages and native BI questions.
+    report_queries = {
+        "gc_comparison": "SELECT * FROM dw.gc_comparison(%s)",
+        "gc_trajectory": "SELECT * FROM dw.gc_trajectory(%s)",
+        "gc_time_rules": "SELECT * FROM dw.gc_time_rules(%s)",
+        "team_roster_performance": "SELECT * FROM dw.team_roster_performance(%s)",
+        "terrain_performance": "SELECT * FROM dw.terrain_performance(%s)",
+        "route_directory": "SELECT * FROM dw.route_directory(%s)",
+        "country_outcomes": "SELECT * FROM dw.country_outcomes(%s)",
+    }
+
+    @app.post("/api/reports/{name}")
+    def read_report(name: str, filters: AnalyticsFilters = Body(default_factory=AnalyticsFilters)) -> dict[str, Any]:
+        sql = report_queries.get(name)
+        if sql is None:
+            raise HTTPException(status_code=404, detail="Unknown race report")
+        selection = filters.to_clean_dict()
+        rows = execute_read_query(sql, (Jsonb(selection),))
+        return {"function": name, "filters": selection, "row_count": len(rows), "rows": rows}
 
     @app.post("/api/team/{team_key}/riders")
     def post_team_riders(

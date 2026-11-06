@@ -1,0 +1,63 @@
+/* Shared editorial hierarchy for the race result pages. */
+[hidden], .analysis-page[hidden] {display:none!important}
+.portal-sidebar .rail-nav {display:grid;gap:4px}
+.portal-sidebar .rail-nav .rail-item {justify-content:flex-start;padding:12px 14px;text-align:left;font-weight:550;}
+.portal-sidebar .exploration-entry {border-top:1px solid #344756;margin-top:13px;padding-top:16px;}
+.portal-sidebar .rail-utilities {margin-top:6px}
+.season-hero {min-height:156px;display:flex;align-items:flex-end}
+.season-hero .hero-copy {padding:22px 26px}
+.season-hero h2 {margin:6px 0 0;font-size:clamp(30px,4vw,48px);letter-spacing:-1.8px;}
+.analysis-head {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.analysis-head h3,.analysis-block h3,.explore-shortcuts h3 {margin:0;font-size:clamp(16px,1.5vw,23px);letter-spacing:-.035em;line-height:1.24;color:var(--ink-primary)}
+.podium-summary,.stage-trend-card {padding:20px 24px}
+.finish-pair {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}
+.finish-rider {display:grid;grid-template-columns:minmax(0,1fr) auto;text-align:left;cursor:pointer;border:0;border-top:3px solid #cbd5dc;background:#f7f9fa;border-radius:4px;padding:14px 16px;gap:4px;color:var(--ink-primary);font-family:inherit}
+.finish-rider:first-child {border-top-color:#dbb82c;background:#fffbee}
+.finish-rider small,.finish-rider span {font-size:11px;color:#4a5e6a}
+.finish-rider small,.finish-rider strong,.finish-rider span {grid-column:1}
+.finish-rider strong {font-size:clamp(16px,2vw,25px);line-height:1.15}
+.finish-rider b {grid-column:2;grid-row:2/4;align-self:center;font-size:clamp(16px,2.2vw,28px);font-variant-numeric:tabular-nums;color:#0f6762}
+.explore-shortcuts {display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.explore-shortcuts h3 {margin-right:8px}
+.explore-shortcuts button,.analysis-tabs button,.analysis-segment button,.analysis-toolbar button {background:#fff;color:#1d3d49;border:1px solid #d5dfe4;padding:8px 12px;border-radius:7px;cursor:pointer;font:600 13px/1.35 var(--font-sans)}
+.explore-shortcuts button span {margin-left:12px}
+.bi-disclosure summary {cursor:pointer;color:#415668;font-weight:650;padding:10px 0}
+#race-kpis [role=link] {cursor:pointer}
+.rail-item:focus-visible,.analysis-page :focus-visible,.finish-rider:focus-visible,[role=link]:focus-visible {outline:3px solid #18827c;outline-offset:2px}
+.approved-layout.explorer-card {display:block;background:transparent;border:0;box-shadow:none;overflow:visible;padding:0}
+.approved-layout > .module-subtoolbar,.approved-layout > .analysis-view-toolbar,.approved-layout > #explore-table-container,.approved-layout > #insight-story {display:none!important}
+.analysis-sheet,.analysis-page {display:grid;gap:18px;min-width:0}
+.analysis-block {padding:clamp(15px,2vw,26px);min-width:0;border:1px solid var(--border-line);border-radius:12px;background:white;color:var(--ink-primary)}
+.analysis-sheet > .analysis-block:first-child {border-top:3px solid var(--tour-yellow)}
+.analysis-split {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.analysis-toolbar,.analysis-segment,.analysis-tabs {display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.analysis-toolbar {margin:12px 0}
+.analysis-tabs {margin:0 0 18px}
+.analysis-tabs [aria-current=page],.analysis-segment [aria-pressed=true],.analysis-toolbar button[aria-pressed=true] {background:#18394a;color:white;border-color:#18394a}
+.analysis-kpis {display:flex;flex-wrap:wrap;gap:12px;margin:12px 0}
+.analysis-kpi {display:grid;gap:4px;background:#f1f7f6;border-radius:8px;padding:12px 16px;font-variant-numeric:tabular-nums}
+.analysis-kpi strong {color:#096861;font-size:24px}
+.analysis-page select,.analysis-page input:not([type=checkbox],[type=radio]) {padding:7px 9px;border-radius:6px;border:1px solid #c3cfd6;background:white;color:#203a49;font:inherit;max-width:100%}
+.analysis-page button,.analysis-page input,.analysis-page select {font-family:inherit}
+.analysis-page button {cursor:pointer}
+.analysis-table-wrap {max-width:100%;overflow:auto}
+.analysis-table {width:100%;border-collapse:collapse;text-align:left;font-size:13px;font-variant-numeric:tabular-nums}
+.analysis-table th,.analysis-table td {padding:9px 10px;border-bottom:1px solid #e7edf0;vertical-align:middle}
+.analysis-table th {background:#f5f8f9;color:#4c626f;font-weight:650;font-size:12px}
+.analysis-table tr:last-child td {border-bottom:0}
+.analysis-link,.page-return button {border:0;background:none;padding:3px 1px;color:#09685f;font-weight:650;cursor:pointer;font-size:13px}
+.analysis-link:hover,.page-return button:hover {text-decoration:underline}
+.analysis-note,.analysis-empty {color:#536974;font-size:12px;line-height:1.5}
+.analysis-empty {padding:16px 0}
+.analysis-block details > summary {cursor:pointer;font-weight:600}
+.page-return {margin:3px 0}
+.trend-unit {margin:6px 0 2px}
+.drill-measure-select {display:flex;align-items:center;gap:12px;font-weight:600;margin:12px 0}
+.drill-context .drill-selected-measure {font-weight:750;color:#096661}
+@media(max-width:750px){.finish-pair,.analysis-split{grid-template-columns:1fr}.analysis-page{gap:12px}.finish-pair{gap:6px}.analysis-block,.podium-summary,.stage-trend-card{padding:14px}.portal-sidebar .rail-nav{display:flex;flex-wrap:wrap}.portal-sidebar .exploration-entry{margin:0;border:0}.portal-sidebar .rail-nav .rail-item{padding:7px 11px}}
+
+
+#workspace-heading:focus {outline:0}
+.stage-trend-chart svg {width:100%;max-height:190px}
+
+.drill-entry-scope{font-size:13px;font-weight:650;color:#27565c;overflow-wrap:anywhere}

@@ -14,7 +14,7 @@ ROOT_FILES = {
 TREE_SUFFIXES = {
     'web': {'.py', '.html', '.css', '.js', '.svg', '.jpg', '.png', '.md'},
     'sql': {'.sql'}, 'data': {'.csv'}, 'deploy': {'.py', '.sh'},
-    'tests': {'.py', '.cjs', '.json'},
+    'tests': {'.py', '.cjs', '.json', '.sql'},
 }
 SCRIPTS = {'__init__.py', 'build_load.py', 'provision_dashboard.py', 'benchmark.py', 'package_standard.py'}
 DOCS = {'star-schema.md', 'data_dictionary.md', 'analytics.md', 'dashboard.md',

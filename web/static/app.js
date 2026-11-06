@@ -16,6 +16,9 @@
   const ALLOWED_VIEWS = ["overview", "explore", "methods", "drilldown"];
   let drilldownWorkspace = null;
   const insightPreferences = {};
+  const pageTrail = [];
+  let drillEntry = null;
+  const researchModules = ["rider_specialisation", "gc_evolution", "time_rules"];
   const INSIGHT_MODULES = ["rider_specialisation", "gc_evolution", "team_depth"];
   const ALLOWED_MODULES = [
     "rider_standings",
@@ -25,6 +28,7 @@
     "rider_specialisation",
     "gc_evolution",
     "team_depth",
+    "time_rules",
   ];
   const ALLOWED_DRILLS = ["stage", "country", "team", "rider"];
   const ALLOWED_STAGE_SCOPES = ["final", "as_of", "selection"];
@@ -107,12 +111,13 @@
   // Stage distance is counted once per stage; country roles use participation grain.
   // Country member detail is a distinct union of nationality and team registration.
   const MODULE_DESCRIPTIONS = {
-    rider_standings: {title: "Classification comparison", desc: ""},
-    team_standings: {title: "Rider & team performance", desc: ""},
+    rider_standings: {title: "Classifications", desc: ""},
+    team_standings: {title: "Riders & teams", desc: ""},
     stage_summary: {title: "Stages & routes", desc: ""},
     country_participation: {title: "Country participation", desc: "Whole-race participation · unknown nationality excluded."},
-    rider_specialisation: {title: "Recruit for the terrain", desc: ""},
-    gc_evolution: {title: "Find the decisive stages", desc: ""},
+    rider_specialisation: {title: "Terrain fit", desc: ""},
+    gc_evolution: {title: "Decisive stages", desc: ""},
+    time_rules: {title: "Time rules", desc: ""},
     team_depth: {title: "Build a balanced squad", desc: ""}
   };
 
@@ -813,6 +818,9 @@
   }
 
   async function loadSignedEmbed() {
+    const panel=document.getElementById("bi-disclosure");
+    if (state.activeView !== "overview" || (panel && !panel.open)) return;
+
     clearEmbedRefreshTimer();
     const reqId = ++state.requestSeq.embed;
     const loadingBox = document.getElementById("embed-loading-state");
@@ -1278,6 +1286,9 @@
   async function openStageDetailDrill(stageId, options) {
     const opts = options || {};
     const parsedStageId = parseInt(stageId, 10);
+    if (globalThis.RacePages?.stage_summary && parsedStageId >= 1 && parsedStageId <= 21) {
+      return goToAnalysis("stage_summary", {stageId:parsedStageId}, state.activeView !== "explore" || state.activeExploreModule !== "stage_summary");
+    }
     const container = document.getElementById("explore-table-container");
     const titleEl = document.getElementById("explore-module-title");
     const descEl = document.getElementById("explore-module-desc");
@@ -1594,6 +1605,9 @@
   async function openCountryMemberDrill(rawCountryCode, options) {
     const opts = options || {};
     const normalizedCode = String(rawCountryCode || "").trim().toUpperCase();
+    if (globalThis.RacePages?.country_participation && state.metadata.countries.some(c=>c.country_code===normalizedCode)) {
+      return goToAnalysis("country_participation", {countryCode:normalizedCode}, state.activeView !== "explore" || state.activeExploreModule !== "country_participation");
+    }
     const container = document.getElementById("explore-table-container");
     const titleEl = document.getElementById("explore-module-title");
     const descEl = document.getElementById("explore-module-desc");
@@ -2175,79 +2189,121 @@
      Overview & Explorer Data Loaders
      -------------------------------------------------------------------------- */
 
+  let finalGCLeaders;
   async function refreshOverviewCards() {
     const reqId = ++state.requestSeq.overview;
     const gcContainer = document.getElementById("overview-standings-container");
-    const teamContainer = document.getElementById("overview-teams-container");
-    const clsSelect = document.getElementById("overview-classification-select");
-    const classification = clsSelect ? clsSelect.value : "gc";
-
-    updateScopeBanner();
-
-    if (gcContainer) {
-      renderStateBox(
-        gcContainer,
-        "loading",
-        "Loading Individual Standings…",
-        "Updating classification leaders…"
-      );
-    }
-    if (teamContainer) {
-      renderStateBox(
-        teamContainer,
-        "loading",
-        "Loading Team Standings…",
-        "Updating team standings…"
-      );
-    }
-
     const trend = document.getElementById("stage-trend-chart");
-    if (trend) trend.innerHTML = '<p class="chart-empty">Updating stage data…</p>';
-    const riderFilters = buildFilterPayload({ classification });
-    const teamFilters = buildFilterPayload();
+    updateScopeBanner();
+    finalGCLeaders ??= apiPost("/api/analytics/rider_standings", {stage_scope:"final", classification:"gc", time_basis:"adjusted"})
+      .then(data => data.rows.slice(0, 2))
+      .catch(error => { finalGCLeaders = undefined; throw error; });
+    const stages = apiPost("/api/analytics/stage_summary", buildStageScopeOnlyFilters());
+    const [leaders, stageData] = await Promise.allSettled([finalGCLeaders, stages]);
+    if (reqId !== state.requestSeq.overview) return;
+    if (gcContainer) {
+      const rows = leaders.status === "fulfilled" ? leaders.value : [];
+      if (rows.length) {
+        gcContainer.innerHTML = '<div class="finish-pair">' + rows.map(row =>
+          '<button class="finish-rider" type="button" data-final-rider="' + Number(row.rider_key) + '"><small>GC ' + Number(row.rank) +
+          '</small><strong>' + escapeHtml(row.rider_name) + '</strong><span>' + escapeHtml(row.team_name) +
+          '</span><b>' + (row.rank === 1 ? formatDuration(row.total_seconds) : formatGap(row.gap_seconds)) + '</b></button>'
+        ).join("") + '</div>';
+        gcContainer.querySelectorAll("[data-final-rider]").forEach(button => button.onclick = () =>
+          goToAnalysis("rider_standings", {riderKey:Number(button.dataset.finalRider), finalGC:true}));
+      } else renderStateBox(gcContainer, "warning", "Standings unavailable", "");
+    }
+    if (trend) trend.innerHTML = stageData.status === "fulfilled" ? RaceAppearance.stageChartMarkup(stageData.value.rows || []) : '<p class="analysis-empty">Stage results unavailable.</p>';
+  }
 
+  function syncPageReturn() {
+    const box = document.getElementById("page-return");
+    if (!box) return;
+    box.hidden = !pageTrail.length;
+    const last = pageTrail.at(-1);
+    if (last) document.getElementById("page-return-btn").textContent = "← " + (last.view === "overview" ? "Race overview" : MODULE_DESCRIPTIONS[last.module]?.title || "Previous view");
+  }
+
+  function rememberPage() {
+    const controls = Array.from(document.getElementById("global-filter-form").querySelectorAll("input,select"), el => ({el,value:el.value,checked:el.checked}));
+    const keys = ["selectedStageIds","selectedTeamKeys","selectedRiderKeys","multiTeamLock","multiRiderLock","explicitEmptyArrays"];
+    pageTrail.push({view:state.activeView,module:state.activeExploreModule,controls,
+      filters:Object.fromEntries(keys.map(k=>[k,structuredClone(state[k])])), scroll:window.scrollY,
+      prefs:structuredClone(insightPreferences[state.activeExploreModule] || {})});
+    syncPageReturn();
+  }
+
+  async function goToAnalysis(mod, preferences = {}, save = true) {
+    if (save) rememberPage();
+    Object.assign(insightPreferences[mod] ||= {}, preferences);
+    state.activeStageDrillId = state.activeCountryDrillCode = null;
+    switchWorkspaceView("explore", {skipRefresh:true});
+    activateExploreModuleTab(mod, {skipRefresh:true});
+    await refreshExplorerModule();
+    if (state.activeView === "explore" && state.activeExploreModule === mod) scrollAndFocusElement(document.getElementById("workspace-heading"));
+  }
+
+  async function backToAnalysis() {
+    const last = pageTrail.pop();
+    if (!last) return;
+    Object.assign(state,last.filters);
+    last.controls.forEach(({el,value,checked})=>{el.value=value; if(el.type==="checkbox")el.checked=checked;});
+    renderSelectedStagePills(); renderSelectedTeamPills(); renderSelectedRiderPills(); syncScopeControlVisibility(); updateScopeBanner();
+    insightPreferences[last.module] = last.prefs;
+    syncPageReturn();
+    if (last.view === "overview") await switchWorkspaceView("overview");
+    else await goToAnalysis(last.module, {}, false);
+    window.scrollTo({top:last.scroll,behavior:"instant"});
+  }
+
+  function openMetricDrill(intent) {
+    rememberPage();
+    drillEntry = intent;
+    switchWorkspaceView("drilldown", {skipRefresh:true});
+    refreshDrilldownWorkspace(intent);
+    scrollAndFocusElement(document.getElementById("workspace-heading"));
+  }
+
+  async function showAnalysisPage(mod, opts) {
+    const request = ++state.requestSeq.explore;
+    const isCurrent = () => request === state.requestSeq.explore && state.activeView === "explore" && state.activeExploreModule === mod;
+    const host = document.getElementById("analysis-host");
+    const element = document.createElement("div");
+    host.hidden = false;
+    host.replaceChildren(element);
+    element.className = "analysis-sheet";
+    element.innerHTML = '<p class="analysis-empty" role="status">Loading results…</p>';
+    const filters = buildFilterPayload();
+    const active = researchModules.includes(mod);
+    document.getElementById("research-tabs").hidden = !active;
+    document.querySelectorAll("#research-tabs button").forEach(button=>{
+      if (button.dataset.openModule===mod) button.setAttribute("aria-current","page"); else button.removeAttribute("aria-current");
+    });
+    document.getElementById("workspace-heading").textContent = MODULE_DESCRIPTIONS[mod].title;
+    host.closest(".explorer-card").classList.add("approved-layout");
+    const read = async (prefix, name, selection) => (await apiPost("/api/"+prefix+"/"+name,selection ?? filters)).rows;
     try {
-      const [riderData, teamData, stageData] = await Promise.all([
-        apiPost("/api/analytics/rider_standings", riderFilters),
-        apiPost("/api/analytics/team_standings", teamFilters),
-        apiPost("/api/analytics/stage_summary", buildStageScopeOnlyFilters()).catch(() => null),
-      ]);
-      if (reqId !== state.requestSeq.overview) return;
-      const chart = document.getElementById("stage-trend-chart");
-      if (chart) chart.innerHTML = stageData ? RaceAppearance.stageChartMarkup(stageData.rows || []) : '<p class="chart-empty">Stage data is currently unavailable. Try refreshing.</p>';
-      state.latestTeamStandings = teamData.rows || [];
-      renderRiderStandingsTable(gcContainer, riderData.rows || [], classification, true);
-      renderTeamStandingsTable(teamContainer, teamData.rows || []);
-      updateDrillTeamSummaryStrip();
-    } catch (err) {
-      if (reqId !== state.requestSeq.overview) return;
-      if (trend) trend.innerHTML = '<p class="chart-empty">Stage data is currently unavailable.</p>';
-      renderStateBox(
-        gcContainer,
-        "warning",
-        "Standings Currently Unavailable",
-        err.message || "Database connection is not configured."
-      );
-      renderStateBox(
-        teamContainer,
-        "warning",
-        "Team Standings Currently Unavailable",
-        err.message || "Database connection is not configured."
-      );
+      await window.RacePages[mod]({element, filters, metadata:state.metadata, preferences:insightPreferences[mod] ||= {},
+        isCurrent, analytics:(name,selection)=>read("analytics",name,selection), report:(name,selection)=>read("reports",name,selection),
+        post:apiPost, go:goToAnalysis, drill:openMetricDrill});
+      if (isCurrent() && opts.scroll) scrollAndFocusElement(document.getElementById("workspace-heading"));
+    } catch (error) {
+      if (isCurrent()) renderStateBox(element, "warning", "Results unavailable", error.message || "Try again.");
     }
   }
 
   function syncSidebarNavigation() {
     document.querySelectorAll(".portal-sidebar .rail-item").forEach(btn => {
       const active = btn.dataset.openModule ? state.activeView === "explore" && btn.dataset.openModule === state.activeExploreModule : btn.dataset.view === state.activeView;
-      btn.classList.toggle("active", active);
-      if (active) btn.setAttribute("aria-current", "page"); else btn.removeAttribute("aria-current");
+      const selected = btn.dataset.exploration ? state.activeView === "explore" && researchModules.includes(state.activeExploreModule) : active;
+      btn.classList.toggle("active", selected);
+      if (selected) btn.setAttribute("aria-current", "page"); else btn.removeAttribute("aria-current");
     });
   }
 
   function activateExploreModuleTab(modName, options) {
     const opts = options || {};
-    state.activeExploreModule = modName || "rider_standings";
+    state.activeExploreModule = (modName === "team_depth" && globalThis.RacePages?.team_standings) ? "team_standings" : modName || "rider_standings";
     configureInsightLayout(state.activeExploreModule);
     syncSidebarNavigation();
     Array.from(document.querySelectorAll(".module-tab-bar .module-tab")).forEach((t) => {
@@ -2277,6 +2333,8 @@
 
   async function refreshExplorerModule(options) {
     const opts = options || {};
+    if (globalThis.RacePages?.[state.activeExploreModule]) return showAnalysisPage(state.activeExploreModule,opts);
+
     if (
       state.activeExploreModule === "stage_summary" &&
       state.activeStageDrillId !== null &&
@@ -3318,6 +3376,9 @@
     syncScopeControlVisibility();
     updateScopeBanner();
 
+    if (targetModule === "rider_standings" && ALLOWED_CLASSIFICATIONS.includes(rawClassification)) {
+      (insightPreferences.rider_standings ||= {}).classification = rawClassification;
+    }
     if (targetModule) {
       activateExploreModuleTab(targetModule, { skipRefresh: true });
     }
@@ -3357,6 +3418,7 @@
   function switchWorkspaceView(viewName, options) {
     const opts = options || {};
     state.activeView = viewName;
+    if (viewName !== "explore") state.requestSeq.explore++;
     syncSidebarNavigation();
     const views = {
       overview: document.getElementById("view-overview"),
@@ -3382,11 +3444,16 @@
 
     document.getElementById("inspector-details")?.classList.toggle("hidden", viewName === "drilldown");
     document.getElementById("open-inspector-btn")?.classList.toggle("hidden", viewName === "drilldown");
-    if (viewName === "explore" && !opts.skipRefresh) refreshExplorerModule();
-    if (viewName === "drilldown" && !opts.skipRefresh) refreshDrilldownWorkspace();
+    if (!opts.skipRefresh) return refreshActiveView();
   }
 
-  async function refreshDrilldownWorkspace() {
+  function refreshActiveView() {
+    if (state.activeView === "overview") return Promise.all([refreshOverviewCards(), loadSignedEmbed()]);
+    if (state.activeView === "explore") return refreshExplorerModule();
+    if (state.activeView === "drilldown") return refreshDrilldownWorkspace();
+  }
+
+  async function refreshDrilldownWorkspace(intent) {
     if (!drilldownWorkspace) {
       drilldownWorkspace = RaceDrilldown.mount({
         element: document.getElementById("drill-workspace"), apiPost,
@@ -3394,37 +3461,20 @@
           if (!state.metadata.riders.length) await loadMetadata();
           return state.metadata;
         },
-        getFilters: () => buildFilterPayload(),
+        getFilters: () => RaceDrilldown.mergeFilters(drillEntry?.baseFilters || buildFilterPayload(),drillEntry?.filters || {},state.metadata.stages),
+        initialMetric:"top10",
       });
     }
+    if (intent) drilldownWorkspace.enter(intent);
     await drilldownWorkspace.load();
   }
 
   async function applyAllFilters() {
+    if (drillEntry?.baseFilters) delete drillEntry.baseFilters;
     updateScopeBanner();
     state.specialisationPage = 1;
 
-    const activeTeams = getActiveTeamKeys();
-    const activeRiders = getActiveRiderKeys();
-
-    if (Array.isArray(activeTeams) && activeTeams.length > 0) {
-      state.drillTeamKey = activeTeams[0];
-      const drillSelect = document.getElementById("drill-team-select");
-      if (drillSelect) drillSelect.value = String(state.drillTeamKey);
-    }
-
-    const preferredRider =
-      Array.isArray(activeRiders) && activeRiders.length > 0 ? activeRiders[0] : null;
-
-    await Promise.all([
-      loadSignedEmbed(),
-      refreshOverviewCards(),
-      state.activeView === "drilldown" ? refreshDrilldownWorkspace() : Promise.resolve(),
-      state.activeView === "explore" ? refreshExplorerModule() : Promise.resolve(),
-      state.drillTeamKey
-        ? loadTeamDrillRoster(state.drillTeamKey, preferredRider, { focusTarget: null })
-        : Promise.resolve(),
-    ]);
+    await refreshActiveView();
   }
 
   function renderRaceContext(meta) {
@@ -3436,23 +3486,31 @@
     const metrics = [
       ["Starters", data.starters, `<b>${data.finishers} finished</b> · ${(100*data.finishers/data.starters).toFixed(1)}% completion`],
       ["Teams", data.teams, ""],
-      ["Stages", data.stages, "Flat, hilly, mountain & time trial"],
+      ["Stages", data.stages, ""],
       ["Route distance · km", data.distance === null ? "—" : data.distance.toLocaleString("en-GB", {maximumFractionDigits:1}), ""]
     ];
     box.innerHTML = metrics.map(([label,value,note]) => `<div class="kpi-card"><div class="kpi-label">${label}</div><div class="kpi-value">${value}</div><div class="kpi-note">${note}</div></div>`).join("");
+    const stageTile=box.children[2];
+    stageTile.setAttribute("role","link"); stageTile.tabIndex=0;
+    stageTile.setAttribute("aria-label","Open the stage directory");
+    stageTile.onclick=()=>goToAnalysis("stage_summary");
+    stageTile.onkeydown=event=>{if(["Enter"," "].includes(event.key)){event.preventDefault();stageTile.click();}};
   }
 
   function openChartsForModule() {
+    const disclosure = document.getElementById("bi-disclosure");
+    if (disclosure) disclosure.open = true;
     const target = RaceAppearance.chartTabForModule(state.activeExploreModule);
     state.activeEmbedTabIndex = target.index;
     state.activeEmbedTabKey = target.key;
-    switchWorkspaceView("overview", {skipRefresh:true});
+    switchWorkspaceView("overview");
     document.getElementById("back-to-table-btn")?.classList.remove("hidden");
-    loadSignedEmbed();
     scrollAndFocusElement(document.getElementById("bi-workspace-title"));
   }
 
   function bindAppearance() {
+    document.getElementById("page-return-btn")?.addEventListener("click",backToAnalysis);
+    document.getElementById("bi-disclosure")?.addEventListener("toggle",event=>{if(event.target.open)loadSignedEmbed();else clearEmbedRefreshTimer();});
     document.getElementById("insight-table-toggle")?.addEventListener("click", () => {
       const btn = document.getElementById("insight-table-toggle");
       const open = btn.getAttribute("aria-expanded") !== "true";
@@ -3488,12 +3546,17 @@
     });
     document.getElementById("open-inspector-btn").addEventListener("click", () => scrollAndFocusElement(document.getElementById("drill-team-step")));
     document.querySelectorAll("[data-open-module]").forEach(btn => btn.addEventListener("click", () => {
-      if (btn.dataset.openModule === "rider_standings" && btn.closest("#view-overview")) {
+      if (btn.dataset.finalStandings) {
+        goToAnalysis("rider_standings",{finalGC:true,riderKey:null,classification:"gc",stageId:null});
+        return;
+      }
+      pageTrail.length = 0; syncPageReturn();
+      if (btn.dataset.openModule === "rider_standings" && btn.closest("#view-overview") && document.getElementById("overview-classification-select")) {
         document.getElementById("explore-classification-select").value = document.getElementById("overview-classification-select").value;
       }
       switchWorkspaceView("explore", {skipRefresh:true});
       activateExploreModuleTab(btn.dataset.openModule);
-      scrollAndFocusElement(document.getElementById("explore-module-title"));
+      scrollAndFocusElement(document.getElementById("workspace-heading"));
     }));
     const chart = document.getElementById("stage-trend-chart");
     const openPoint = ev => {
@@ -3508,6 +3571,8 @@
     bindAppearance();
     Array.from(document.querySelectorAll(".workspace-nav .nav-btn")).forEach((btn) => {
       btn.addEventListener("click", () => {
+        pageTrail.length=0; syncPageReturn();
+        if(btn.dataset.view==="drilldown"){drillEntry=null;drilldownWorkspace?.enter({dimension:"team",path:[],metric:"top10"});}
         switchWorkspaceView(btn.getAttribute("data-view") || "overview");
         scrollAndFocusElement(document.getElementById("workspace-heading"));
       });
@@ -3715,6 +3780,17 @@
     await Promise.all([loadHealth(), loadMetadata()]);
 
     const linkPlan = parseAndApplyUrlDeepLink();
+    // Native BI deep links and on-page selections share the same evidence workspace.
+    if (globalThis.RacePages && linkPlan.teamKey && ["team","rider"].includes(linkPlan.drill)) {
+      const rider = linkPlan.drill === "rider" && linkPlan.riderKey;
+      drillEntry = {dimension:"team", metric:rider?"results":"roster",
+        path:rider?[linkPlan.teamKey,rider]:[linkPlan.teamKey]};
+      switchWorkspaceView("drilldown",{skipRefresh:true});
+      await refreshDrilldownWorkspace(drillEntry);
+      scrollAndFocusElement(document.getElementById("drill-level-heading"));
+      return;
+    }
+
     // Legacy team/rider links target the inspector, which is intentionally hidden
     // in the dimension workspace. Keep these combinations visible in Overview.
     if (linkPlan.view === "drilldown" && ["team", "rider"].includes(linkPlan.drill)) {
@@ -3722,101 +3798,23 @@
     }
 
 
-    if (linkPlan.invalidCountryCode) {
-      await Promise.all([
-        loadSignedEmbed(),
-        refreshOverviewCards(),
-        openCountryMemberDrill(linkPlan.invalidCountryCode, { scroll: true }),
-      ]);
+    if (linkPlan.invalidCountryCode || linkPlan.drill === "country") {
+      return openCountryMemberDrill(linkPlan.invalidCountryCode || linkPlan.countryCode, {scroll:true});
+    }
+    if (linkPlan.invalidStageId || linkPlan.drill === "stage") {
+      return openStageDetailDrill(linkPlan.invalidStageId || linkPlan.stageId, {scroll:true});
+    }
+    if (linkPlan.view) switchWorkspaceView(linkPlan.view, {skipRefresh:true});
+
+    // Fallback for clients that still use the legacy inspector.
+    if (linkPlan.applied && ["team","rider"].includes(linkPlan.drill)) {
+      const showRider = linkPlan.drill === "rider";
+      await Promise.all([refreshActiveView(), selectTeamForDrill(linkPlan.teamKey,
+        showRider ? linkPlan.riderKey : null, {focusTarget:showRider ? "rider" : "roster"})]);
       return;
     }
-
-    if (linkPlan.invalidStageId) {
-      await Promise.all([
-        loadSignedEmbed(),
-        refreshOverviewCards(),
-        openStageDetailDrill(linkPlan.invalidStageId, { scroll: true }),
-      ]);
-      return;
-    }
-
-    if (linkPlan.applied) {
-      if (linkPlan.drill === "stage") {
-        await Promise.all([
-          loadSignedEmbed(),
-          refreshOverviewCards(),
-          openStageDetailDrill(linkPlan.stageId, { scroll: true }),
-          state.drillTeamKey
-            ? loadTeamDrillRoster(state.drillTeamKey, null, { focusTarget: null })
-            : Promise.resolve(),
-        ]);
-        return;
-      }
-
-      if (linkPlan.drill === "country") {
-        await Promise.all([
-          loadSignedEmbed(),
-          refreshOverviewCards(),
-          openCountryMemberDrill(linkPlan.countryCode, { scroll: true }),
-          state.drillTeamKey
-            ? loadTeamDrillRoster(state.drillTeamKey, null, { focusTarget: null })
-            : Promise.resolve(),
-        ]);
-        return;
-      }
-
-      if (linkPlan.drill === "team") {
-        if (linkPlan.view) {
-          switchWorkspaceView(linkPlan.view, { skipRefresh: true });
-        }
-        await Promise.all([
-          loadSignedEmbed(),
-          refreshOverviewCards(),
-          state.activeView === "explore" ? refreshExplorerModule() : Promise.resolve(),
-          selectTeamForDrill(linkPlan.teamKey, null, { focusTarget: "roster" }),
-        ]);
-        return;
-      }
-
-      if (linkPlan.drill === "rider") {
-        if (linkPlan.view) {
-          switchWorkspaceView(linkPlan.view, { skipRefresh: true });
-        }
-        await Promise.all([
-          loadSignedEmbed(),
-          refreshOverviewCards(),
-          state.activeView === "explore" ? refreshExplorerModule() : Promise.resolve(),
-          selectTeamForDrill(linkPlan.teamKey, linkPlan.riderKey, { focusTarget: "rider" }),
-        ]);
-        return;
-      }
-
-      if (linkPlan.view === "explore") {
-        switchWorkspaceView("explore", { skipRefresh: true });
-        await Promise.all([
-          loadSignedEmbed(),
-          refreshOverviewCards(),
-          refreshExplorerModule({ scroll: true }),
-          state.drillTeamKey
-            ? loadTeamDrillRoster(state.drillTeamKey, null, { focusTarget: null })
-            : Promise.resolve(),
-        ]);
-        return;
-      }
-
-      if (linkPlan.view) {
-        switchWorkspaceView(linkPlan.view, { skipRefresh: true });
-      }
-    }
-
-    await Promise.all([
-      loadSignedEmbed(),
-      refreshOverviewCards(),
-      state.activeView === "drilldown" ? refreshDrilldownWorkspace() : Promise.resolve(),
-      state.drillTeamKey
-        ? loadTeamDrillRoster(state.drillTeamKey, null, { focusTarget: null })
-        : Promise.resolve(),
-    ]);
+    if (linkPlan.view === "explore") return refreshExplorerModule({scroll:true});
+    await refreshActiveView();
   }
 
   if (document.readyState === "loading") {

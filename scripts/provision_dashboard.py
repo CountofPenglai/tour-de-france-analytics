@@ -72,6 +72,19 @@ SURROGATE_KEY_COLUMNS = frozenset(
 
 # Human-readable column titles with explicit units (seconds, km, %, points).
 COLUMN_LABELS: Dict[str, str] = {
+    "rider_burden_seconds": "Rider adjusted time (s)",
+    "team_burden_seconds": "Team adjusted time (s)",
+    "burden_share_pct": "Share of team time (%)",
+    "young_gc_rank": "Young GC rank",
+    "mountain_gc_rank": "Mountain time rank (proxy)",
+    "best_gc_rider_names": "Best final GC rider(s)",
+    "mountain_rank_gain": "Positions gained on mountain GC",
+    "flat_speed_kmh": "Flat speed (km/h)", "hilly_speed_kmh": "Hilly speed (km/h)",
+    "mountain_speed_kmh": "Mountain speed (km/h)", "itt_speed_kmh": "ITT speed (km/h)",
+    "mountain_sample_count": "Mountain rider–stage results",
+    "mountain_podium_pct": "Mountain podium rate (%)",
+    "baseline_gap": "Standard GC gap (s)", "scenario_gap": "Scenario GC gap (s)",
+    "winning_margin": "Winner’s margin (s)",
     # Identifiers & dimensions
     "rank": "Rank",
     "cumulative_rank": "GC Rank",
@@ -879,6 +892,8 @@ def _build_card_specs() -> Tuple[CardSpec, ...]:
     f_country = build_filter_jsonb_sql(COUNTRY_FILTER_KEYS)
     f_spec = build_filter_jsonb_sql(SPECIALISATION_FILTER_KEYS)
     f_depth = build_filter_jsonb_sql(DEPTH_FILTER_KEYS)
+    ranked_scope_keys = tuple(k for k in ALL_COMMON_FILTER_KEYS if k != "time_basis")
+    f_ranked = build_filter_jsonb_sql(ranked_scope_keys)
 
     return (
         # =====================================================================
@@ -1098,7 +1113,7 @@ ORDER BY rsr.stage_order ASC, rsr.finish_rank ASC, rsr.bib_number ASC;""",
             slug="class_gc_table",
             name="Time Standings · Active Scope",
             description=(
-                "Cumulative time (seconds) and gap among riders completing every stage in the active scope. "
+                "GC, young GC and mountain-stage time proxy ranks for each rider completing the active scope. "
                 "Final means Full-Race GC; As-Of means Stages 1–S; Selection means selected-stage performance, "
                 "not full-race GC. Click a rider to open their stage trajectory in the portal."
             ),
@@ -1106,15 +1121,19 @@ ORDER BY rsr.stage_order ASC, rsr.finish_rank ASC, rsr.bib_number ASC;""",
             display="table",
             row=3,
             col=0,
-            size_x=12,
+            size_x=24,
             size_y=7,
             filter_keys=ALL_COMMON_FILTER_KEYS,
-            sql_functions_used=("dw.rider_standings",),
-            sql_query=f"""SELECT
+            sql_functions_used=("dw.rider_standings", "dw.gc_comparison"),
+            sql_query=f"""WITH active AS (SELECT {f_gc} AS f)
+SELECT
     rs.rank,
     rs.bib_number,
     rs.rider_key,
     rs.rider_name,
+    g.young_gc_rank,
+    g.mountain_gc_rank,
+    g.mountain_rank_gain,
     rs.team_key,
     rs.team_name,
     rs.is_young_rider,
@@ -1123,7 +1142,8 @@ ORDER BY rsr.stage_order ASC, rsr.finish_rank ASC, rsr.bib_number ASC;""",
     rs.gap_seconds,
     rs.rank_percentile,
     rs.time_basis
-FROM dw.rider_standings({f_gc}) rs
+FROM dw.rider_standings((SELECT f FROM active)) rs
+JOIN dw.gc_comparison((SELECT f FROM active)) g USING (rider_key)
 ORDER BY rs.rank ASC, rs.bib_number ASC;""",
             click_action=ClickActionSpec(
                 source_column="rider_key",
@@ -1140,8 +1160,8 @@ ORDER BY rs.rank ASC, rs.bib_number ASC;""",
             ),
             tab_slug="tab_classifications",
             display="table",
-            row=3,
-            col=12,
+            row=10,
+            col=0,
             size_x=12,
             size_y=7,
             filter_keys=ALL_COMMON_FILTER_KEYS,
@@ -1177,7 +1197,7 @@ ORDER BY rs.rank ASC, rs.bib_number ASC;""",
             ),
             tab_slug="tab_classifications",
             display="table",
-            row=10,
+            row=17,
             col=0,
             size_x=12,
             size_y=7,
@@ -1214,7 +1234,7 @@ ORDER BY rs.rank ASC, rs.bib_number ASC;""",
             ),
             tab_slug="tab_classifications",
             display="table",
-            row=10,
+            row=17,
             col=12,
             size_x=12,
             size_y=7,
@@ -1251,8 +1271,8 @@ ORDER BY rs.rank ASC, rs.bib_number ASC;""",
             ),
             tab_slug="tab_classifications",
             display="table",
-            row=17,
-            col=0,
+            row=10,
+            col=12,
             size_x=12,
             size_y=7,
             filter_keys=ALL_COMMON_FILTER_KEYS,
@@ -1305,9 +1325,9 @@ ORDER BY mt.rank ASC, mt.bib_number ASC;""",
             ),
             tab_slug="tab_classifications",
             display="bar",
-            row=17,
-            col=12,
-            size_x=12,
+            row=24,
+            col=0,
+            size_x=24,
             size_y=7,
             filter_keys=ALL_COMMON_FILTER_KEYS,
             sql_functions_used=("dw.rider_standings",),
@@ -1379,7 +1399,7 @@ ORDER BY ac.bib_number ASC, classification_label ASC;""",
             ),
             tab_slug="tab_performance",
             display="table",
-            row=0,
+            row=29,
             col=0,
             size_x=12,
             size_y=7,
@@ -1413,7 +1433,7 @@ ORDER BY ts.rank ASC, ts.team_key ASC;""",
             ),
             tab_slug="tab_performance",
             display="table",
-            row=0,
+            row=29,
             col=12,
             size_x=12,
             size_y=7,
@@ -1446,7 +1466,7 @@ ORDER BY ts.rank ASC, ts.team_key ASC;""",
             ),
             tab_slug="tab_performance",
             display="bar",
-            row=7,
+            row=36,
             col=0,
             size_x=24,
             size_y=6,
@@ -1503,7 +1523,7 @@ ORDER BY rank ASC, team_name ASC, aggregation_method ASC;""",
             ),
             tab_slug="tab_performance",
             display="table",
-            row=13,
+            row=14,
             col=0,
             size_x=12,
             size_y=7,
@@ -1541,7 +1561,7 @@ ORDER BY rs.rank ASC, rs.bib_number ASC;""",
             ),
             tab_slug="tab_performance",
             display="line",
-            row=13,
+            row=14,
             col=12,
             size_x=12,
             size_y=7,
@@ -1597,7 +1617,7 @@ ORDER BY sr.stage_order ASC, sr.finish_rank ASC, sr.bib_number ASC;""",
             ),
             tab_slug="tab_performance",
             display="table",
-            row=20,
+            row=21,
             col=0,
             size_x=24,
             size_y=8,
@@ -1649,7 +1669,7 @@ ORDER BY rsr.bib_number ASC, rsr.stage_order ASC;""",
             ),
             tab_slug="tab_country",
             display="table",
-            row=0,
+            row=14,
             col=0,
             size_x=24,
             size_y=4,
@@ -1699,7 +1719,7 @@ CROSS JOIN cp;""",
             ),
             tab_slug="tab_country",
             display="bar",
-            row=4,
+            row=7,
             col=0,
             size_x=12,
             size_y=7,
@@ -1735,7 +1755,7 @@ ORDER BY cp.rider_count DESC, cp.finisher_count DESC, cp.country_code ASC;""",
             ),
             tab_slug="tab_country",
             display="bar",
-            row=4,
+            row=7,
             col=12,
             size_x=12,
             size_y=7,
@@ -1765,26 +1785,30 @@ ORDER BY cp.team_count DESC, cp.rider_count DESC, cp.country_code ASC;""",
             slug="country_full_universe_table",
             name="Country Participation Summary",
             description=(
-                "Complete country participation table comparing rider nationality counts, finisher rate (%), "
-                "and registered team counts across all known countries (including countries with 0 riders or 0 teams). "
+                "Whole-race nationality and registration counts, best final GC with all tied riders, "
+                "and selected-stage wins and podium places including later withdrawals. "
                 "Click a country label to open its members in the portal."
             ),
             tab_slug="tab_country",
             display="table",
-            row=11,
+            row=0,
             col=0,
             size_x=24,
             size_y=7,
-            filter_keys=COUNTRY_DETAIL_FILTER_KEYS,
-            sql_functions_used=("dw.country_participation",),
+            filter_keys=(*DEPTH_FILTER_KEYS, "country_code"),
+            sql_functions_used=("dw.country_participation", "dw.country_outcomes"),
             sql_query=f"""SELECT
     cp.country_key,
     cp.country_code,
     cp.country_name,
     cp.rider_count,
+    cp.team_count,
+    o.best_gc_rank,
+    names.best_gc_rider_names,
+    COALESCE(o.stage_wins, 0) AS stage_wins,
+    COALESCE(o.podium_finishes, 0) AS podium_finishes,
     cp.finisher_count,
     ROUND(cp.finisher_rate * 100.0, 2)::numeric(6, 2) AS finisher_rate_pct,
-    cp.team_count,
     CASE
         WHEN cp.rider_count > 0 AND cp.team_count > 0 THEN 'Riders & Registered Teams'
         WHEN cp.rider_count > 0 AND cp.team_count = 0 THEN 'Riders Only (0 Teams)'
@@ -1792,6 +1816,11 @@ ORDER BY cp.team_count DESC, cp.rider_count DESC, cp.country_code ASC;""",
         ELSE 'Zero Riders & Zero Teams'
     END AS country_role_profile
 FROM dw.country_participation({f_country}) cp
+LEFT JOIN dw.country_outcomes({f_depth}) o USING (country_code)
+LEFT JOIN LATERAL (
+    SELECT string_agg(person->>'rider_name', ', ' ORDER BY ord) AS best_gc_rider_names
+    FROM jsonb_array_elements(o.best_gc_riders) WITH ORDINALITY AS riders(person, ord)
+) names ON true
 WHERE (
     COALESCE(NULL::text [[ , NULLIF((ARRAY[{{{{country_code}}}}]::text[])[1], '') ]]) IS NULL
     OR cp.country_code = COALESCE(NULL::text [[ , NULLIF((ARRAY[{{{{country_code}}}}]::text[])[1], '') ]])
@@ -1899,7 +1928,7 @@ ORDER BY cp.rider_count DESC, cp.team_count DESC, cp.country_code ASC, mm.bib_nu
             ),
             tab_slug="tab_insights",
             display="table",
-            row=0,
+            row=7,
             col=0,
             size_x=14,
             size_y=7,
@@ -1956,7 +1985,7 @@ ORDER BY
             ),
             tab_slug="tab_insights",
             display="bar",
-            row=0,
+            row=7,
             col=14,
             size_x=10,
             size_y=7,
@@ -2015,7 +2044,7 @@ ORDER BY sr.bib_number ASC, sr.stage_type ASC;""",
             ),
             tab_slug="tab_insights",
             display="line",
-            row=7,
+            row=14,
             col=0,
             size_x=14,
             size_y=7,
@@ -2060,7 +2089,7 @@ ORDER BY ge.stage_order ASC, ge.cumulative_rank ASC, ge.bib_number ASC;""",
             ),
             tab_slug="tab_insights",
             display="table",
-            row=7,
+            row=14,
             col=14,
             size_x=10,
             size_y=7,
@@ -2106,11 +2135,11 @@ ORDER BY ge.stage_order ASC, ge.cumulative_rank ASC, ge.bib_number ASC;""",
                 "(distinct Top-10 riders, podiums, and wins are detailed in Team Competitiveness & Depth). "
                 "Click a bar to open the team roster in the portal."
             ),
-            tab_slug="tab_insights",
+            tab_slug="tab_performance",
             display="bar",
-            row=14,
-            col=0,
-            size_x=12,
+            row=0,
+            col=15,
+            size_x=9,
             size_y=7,
             filter_keys=DEPTH_FILTER_KEYS,
             sql_functions_used=("dw.team_depth",),
@@ -2143,29 +2172,29 @@ ORDER BY td.top10_stage_coverage DESC, td.wins DESC, td.podiums DESC, td.team_ke
                 "Team competitiveness summary comparing stage wins, podiums, Top-10 stage coverage (%), "
                 "distinct Top-10 riders, race finishers, and finisher rate (%). Click a team label to open its full roster in the portal."
             ),
-            tab_slug="tab_insights",
+            tab_slug="tab_performance",
             display="table",
-            row=14,
-            col=12,
-            size_x=12,
+            row=0,
+            col=0,
+            size_x=15,
             size_y=7,
             filter_keys=DEPTH_FILTER_KEYS,
             sql_functions_used=("dw.team_depth",),
             sql_query=f"""SELECT
     td.team_key,
     td.team_name,
+    td.top10_distinct_riders,
+    td.participants,
+    td.top10_finishes,
     td.wins,
     td.podiums,
-    td.top10_finishes,
     td.top10_stages,
     td.selected_stage_count,
     ROUND(td.top10_stage_coverage * 100.0, 2)::numeric(6, 2) AS top10_stage_coverage_pct,
-    td.top10_distinct_riders,
     td.finishers,
-    td.participants,
     ROUND(td.finisher_rate * 100.0, 2)::numeric(6, 2) AS finisher_rate_pct
 FROM dw.team_depth({f_depth}) td
-ORDER BY td.wins DESC, td.podiums DESC, td.top10_stage_coverage DESC, td.team_key ASC;""",
+ORDER BY td.top10_distinct_riders DESC, td.top10_finishes DESC, td.team_name ASC;""",
             click_action=ClickActionSpec(
                 source_column="team_key",
                 target_param_key="team_keys",
@@ -2181,7 +2210,7 @@ ORDER BY td.wins DESC, td.podiums DESC, td.top10_stage_coverage DESC, td.team_ke
             ),
             tab_slug="tab_insights",
             display="table",
-            row=21,
+            row=28,
             col=0,
             size_x=24,
             size_y=7,
@@ -2222,6 +2251,63 @@ ORDER BY
             click_action=None,
         ),
         # =====================================================================
+        CardSpec(
+            slug="perf_team_member_contributions",
+            name="Rider contributions to team time",
+            description="Each entrant’s adjusted time and share of their selected team total, with top-ten places and completed rider–stage records.",
+            tab_slug="tab_performance", display="table", row=7, col=0, size_x=24, size_y=7,
+            filter_keys=DEPTH_FILTER_KEYS, sql_functions_used=("dw.team_roster_performance",),
+            sql_query=f"""WITH members AS (
+    SELECT r.*, SUM(r.rider_burden_seconds) OVER (PARTITION BY r.team_key) AS team_burden_seconds
+    FROM dw.team_roster_performance({f_depth}) r
+)
+SELECT
+    m.team_key, m.team_name, m.bib_number, m.rider_key, m.rider_name, m.rider_country_name,
+    m.top10_count, m.win_count, m.completed_stage_count, m.rider_burden_seconds,
+    m.team_burden_seconds, ROUND(100.0 * m.rider_burden_seconds / NULLIF(m.team_burden_seconds, 0), 2) AS burden_share_pct
+FROM members m
+ORDER BY m.team_burden_seconds DESC, m.team_name, m.rider_burden_seconds DESC, m.bib_number;""",
+            click_action=ClickActionSpec("rider_key", "rider_keys", ("rider_name", "bib_number")),
+        ),
+        CardSpec(
+            slug="insight_terrain_speed",
+            name="Terrain speed and mountain results",
+            description="Distance divided by raw riding time, by rider or team. Mountain podium rate and mean winner gap use completed rider–stage records. Rank gain compares Mountain with combined Flat and Hilly speeds.",
+            tab_slug="tab_insights", display="table", row=0, col=0, size_x=24, size_y=7,
+            filter_keys=ranked_scope_keys, sql_functions_used=("dw.terrain_performance",),
+            sql_query=f"""SELECT
+    t.entity_kind, t.entity_name, t.team_key, t.team_name,
+    ROUND(MAX(t.speed_kmh) FILTER (WHERE t.stage_type = 'flat'), 2) AS flat_speed_kmh,
+    ROUND(MAX(t.speed_kmh) FILTER (WHERE t.stage_type = 'hilly'), 2) AS hilly_speed_kmh,
+    ROUND(MAX(t.speed_kmh) FILTER (WHERE t.stage_type = 'mountain'), 2) AS mountain_speed_kmh,
+    ROUND(MAX(t.speed_kmh) FILTER (WHERE t.stage_type = 'individual time-trial'), 2) AS itt_speed_kmh,
+    MAX(t.terrain_rank_gain) AS terrain_rank_gain,
+    MAX(t.sample_count) FILTER (WHERE t.stage_type = 'mountain') AS mountain_sample_count,
+    MAX(t.podium_count) FILTER (WHERE t.stage_type = 'mountain') AS mountain_podium_count,
+    ROUND(MAX(100.0 * t.podium_count / NULLIF(t.sample_count, 0)) FILTER (WHERE t.stage_type = 'mountain'), 2) AS mountain_podium_pct,
+    ROUND(MAX(t.mean_winner_gap_seconds) FILTER (WHERE t.stage_type = 'mountain'), 2) AS mountain_mean_gap_s
+FROM dw.terrain_performance({f_ranked}) t
+GROUP BY t.entity_kind, t.entity_key, t.entity_name, t.team_key, t.team_name
+ORDER BY t.entity_kind DESC, terrain_rank_gain DESC NULLS LAST, t.entity_name;""",
+            click_action=ClickActionSpec("team_key", "team_keys", ("team_name",)),
+        ),
+        CardSpec(
+            slug="insight_time_rules",
+            name="GC under four timing rules",
+            description="Standard and scenario rank, rider gap, and winner’s margin in seconds. Each scenario re-ranks the eligible field under the same scope.",
+            tab_slug="tab_insights", display="table", row=21, col=0, size_x=24, size_y=7,
+            filter_keys=ranked_scope_keys, sql_functions_used=("dw.gc_time_rules",),
+            sql_query=f"""SELECT
+    r.bib_number, r.rider_key, r.rider_name, r.team_name,
+    CASE r.scenario WHEN 'standard' THEN 'Bonuses and penalties' WHEN 'no_bonus' THEN 'Penalties only'
+         WHEN 'no_penalty' THEN 'Bonuses only' ELSE 'Raw finish times' END AS timing_rule,
+    r.baseline_rank, r.scenario_rank, r.rank_gain,
+    r.bonus_seconds, r.penalty_seconds, r.baseline_gap, r.scenario_gap, r.winning_margin
+FROM dw.gc_time_rules({f_ranked}) r
+ORDER BY r.baseline_rank, r.bib_number,
+    CASE r.scenario WHEN 'standard' THEN 1 WHEN 'no_bonus' THEN 2 WHEN 'no_penalty' THEN 3 ELSE 4 END;""",
+            click_action=ClickActionSpec("rider_key", "rider_keys", ("rider_name", "bib_number")),
+        ),
         # Supplementary Native Metabase Pivot (Saved SQL Source -> Query Builder -> Pivot)
         # =====================================================================
         CardSpec(
@@ -2262,7 +2348,7 @@ FROM dw.rider_stage_results();""",
             ),
             tab_slug="tab_insights",
             display="pivot",
-            row=28,
+            row=35,
             col=0,
             size_x=24,
             size_y=8,
@@ -3112,8 +3198,10 @@ class DashboardProvisioner:
         """Obtain column result metadata from the card object or POST /api/card/{id}/query."""
         if isinstance(card_resp, Mapping):
             rm = card_resp.get("result_metadata")
-            if isinstance(rm, list) and len(rm) > 0:
-                return [dict(col) for col in rm if isinstance(col, Mapping) and col.get("name")]
+            if isinstance(rm, list) and rm:
+                cols = [dict(col) for col in rm if isinstance(col, Mapping) and col.get("name")]
+                if [col["name"] for col in cols] == extract_select_columns(spec.sql_query):
+                    return cols
 
         q_resp = self.client.request("POST", f"/api/card/{card_id}/query", {})
         if isinstance(q_resp, Mapping) and isinstance(q_resp.get("data"), Mapping):

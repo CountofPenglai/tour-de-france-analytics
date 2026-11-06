@@ -6,14 +6,14 @@ This document describes the architecture, provisioning workflow, filter semantic
 
 ## 1. Provisioned Dashboard
 
-Metabase OSS v0.65.2.5 hosts the **Project 3 OLAP** collection and **Tour de France 2025 OLAP Analytics** dashboard: five tabs, 30 displayed analytical cards, and one supporting pivot-source question. IDs are assigned independently on each installation and recorded in `.runtime/state/metabase-state.json`. The portal reads these mappings automatically.
+Metabase OSS v0.65.2.5 hosts the **Project 3 OLAP** collection and **Tour de France 2025 OLAP Analytics** dashboard: five tabs, 33 displayed analytical cards, and one supporting pivot-source question. IDs are assigned independently on each installation and recorded in `.runtime/state/metabase-state.json`. The portal reads these mappings automatically.
 
 ## 2. Initialization and Verification
 
 Follow the [standard-package quick start](../README.md#quick-start). The container initializer configures the read-only database connection, creates or updates owned objects, and enables signed embedding. It preserves IDs on subsequent runs. Original development-installation guards are scoped separately from fresh deployments.
 
 ```bash
-# Reconcile the managed dashboard and execute all 31 questions.
+# Reconcile the managed dashboard and execute all 34 questions.
 docker compose run --rm --no-deps bootstrap python -m deploy.bootstrap --verify
 
 # Offline tests / payload preview; no Metabase credentials required.
@@ -77,6 +77,11 @@ Key properties:
 | `dw.rider_specialisation` | `as_of` bounds `stage_order <= S` | Always applied | Yes (for `mean_gap_seconds`) | Stage percentile/gap is global per stage | Yes | No |
 | `dw.team_depth` | `as_of` bounds `stage_order <= S` | Always applied | N/A (rank-based counts) | N/A | Yes | No |
 | `dw.country_participation` | Ignored (race-level participation grain) | Ignored | N/A | N/A | Yes | Applied on Tab 4 summary & detail tables |
+| `dw.gc_comparison` | Same scope as GC | Selection only | Yes | Yes | Yes | No |
+| `dw.gc_time_rules` | Same scope as GC | Selection only | Four timing scenarios | Yes | Yes | No |
+| `dw.team_roster_performance` | Selected stages | Yes | Adjusted time | N/A | Yes | No |
+| `dw.terrain_performance` | Selected stages | Yes | Raw time for speed and winner gaps | Overall or selected group | Yes | No |
+| `dw.country_outcomes` | Final GC and participation use the whole race. Honors follow the selected stages | Honors only | Adjusted final GC | Overall GC | Yes | Applied on the country summary |
 | `dw.olap_rollup` | Full-race view | `stage_types` applied | Shows both raw & adjusted sums | N/A | `team_keys` applied | No |
 | `Rider Terrain Specialisation · Pivot (Full Race)` | Unparameterized full-race teaching card (all 21 stages) | Unmapped | N/A | N/A | Unmapped | No |
 
@@ -102,7 +107,7 @@ Key properties:
 | Slug | Title | Display | Underlying SQL Interface | Click Destination (new portal tab) |
 | --- | --- | --- | --- | --- |
 | `caption_classifications_proxy_notice` | *(Markdown Caption)* | `text` | N/A | No-op |
-| `class_gc_table` | `Time Standings · Active Scope` | `table` | `dw.rider_standings` (`gc`) | Rider → Stage Trajectory |
+| `class_gc_table` | `Time Standings · Active Scope` | `table` | `dw.rider_standings` and `dw.gc_comparison` | Rider → Stage Trajectory |
 | `class_young_table` | `Young Rider Time · Active Scope` | `table` | `dw.rider_standings` (`young`) | Rider → Stage Trajectory |
 | `class_points_proxy_table` | `Points — Proxy` | `table` | `dw.rider_standings` (`points_proxy`) | Rider → Stage Trajectory |
 | `class_kom_proxy_table` | `KOM — Proxy` | `table` | `dw.rider_standings` (`kom_proxy`) | Rider → Stage Trajectory |
@@ -113,33 +118,36 @@ Key properties:
 
 | Slug | Title | Display | Underlying SQL Interface | Click Destination (new portal tab) |
 | --- | --- | --- | --- | --- |
-| `perf_team_stage_top3_table` | `Team Standings · Per-stage Top 3` | `table` | `dw.team_standings` (`stage_top3`) | Team → Full Roster (**Step 1 of Team -> Rider -> Stage**, left half `col=0`) |
-| `perf_team_cumulative_top3_table` | `Team Standings · Cumulative Top 3` | `table` | `dw.team_standings` (`cumulative_top3`) | Team → Full Roster (**Step 1 of Team -> Rider -> Stage**, right half `col=12`) |
-| `perf_team_methods_comparison_bar` | `Team Aggregation Comparison` | `bar` | `dw.team_standings` (both methods) | Team → Full Roster |
+| `insight_team_depth_table` | `Team Competitiveness & Depth` | `table` | `dw.team_depth` | Team → Full Roster |
+| `insight_team_depth_bar` | `Team Top-10 Stage Coverage` | `bar` | `dw.team_depth` | Team → Full Roster |
+| `perf_team_member_contributions` | `Rider contributions to team time` | `table` | `dw.team_roster_performance` | Rider → daily results |
 | `perf_rider_standings_table` | `Rider Cumulative Standings` | `table` | `dw.rider_standings` (`gc`, with `bib_number`) | Rider → Stage Trajectory (**Step 2 of Team -> Rider -> Stage**) |
 | `perf_rider_stage_trajectory_line` | `Rider Stage Percentile Trajectory` | `line` | `dw.rider_standings`, `dw.rider_stage_results` | Stage → Stage Results (**Step 3 of Team -> Rider -> Stage**) |
 | `perf_rider_stage_detail_table` | `Rider Stage Results` | `table` | `dw.rider_stage_results` (with `bib_number`) | Stage → Stage Results (**Step 3 of Team -> Rider -> Stage**) |
+| `perf_team_stage_top3_table` | `Team Standings · Per-stage Top 3` | `table` | `dw.team_standings` (`stage_top3`) | Team → Full Roster (**Step 1 of Team -> Rider -> Stage**, left half `col=0`) |
+| `perf_team_cumulative_top3_table` | `Team Standings · Cumulative Top 3` | `table` | `dw.team_standings` (`cumulative_top3`) | Team → Full Roster (**Step 1 of Team -> Rider -> Stage**, right half `col=12`) |
+| `perf_team_methods_comparison_bar` | `Team Aggregation Comparison` | `bar` | `dw.team_standings` (both methods) | Team → Full Roster |
 
 ### Tab 4: `Country Participation` (ID assigned during initialization)
 
 | Slug | Title | Display | Underlying SQL Interface | Click Destination (new portal tab) |
 | --- | --- | --- | --- | --- |
+| `country_full_universe_table` | `Country Participation Summary` | `table` | `dw.country_participation` and `dw.country_outcomes` | Country → Union Members |
 | `country_overview_kpi_table` | `Participation by Country Overview` | `table` | `dw.fact_participation`, `dw.country_participation` | **No-op** (Preserves `184` total participants = `183` known nationality + `1` `UNK` `#78 Vlasov`) |
 | `country_rider_nationality_bar` | `Riders by Nationality` | `bar` | `dw.country_participation` (`rider_count > 0`) | Country → Union Members |
 | `country_team_registration_bar` | `Teams by Registration Country` | `bar` | `dw.country_participation` (`team_count > 0`) | Country → Union Members |
-| `country_full_universe_table` | `Country Participation Summary` | `table` | `dw.country_participation` (includes 0-count countries) | Country → Union Members |
 | `country_rider_team_detail_table` | `Country Rider & Team Details` | `table` | `dw.country_participation` `LEFT JOIN` `dw.fact_participation` | Rider → Stage Trajectory |
 
 ### Tab 5: `Deep-Dive Insights` (ID assigned during initialization)
 
 | Slug | Title | Display | Underlying SQL Interface | Click Destination (new portal tab) |
 | --- | --- | --- | --- | --- |
+| `insight_terrain_speed` | `Terrain speed and mountain results` | `table` | `dw.terrain_performance` | Team → roster |
 | `insight_rider_specialisation_crosstab_table` | `Rider Terrain Specialisation · Cross-Tab` | `table` | `dw.rider_specialisation` (4 terrain columns) | Rider → Stage Trajectory |
 | `insight_rider_specialisation_detail_bar` | `Rider Terrain Specialisation · Breakdown` | `bar` | `dw.rider_standings`, `dw.rider_specialisation` | Terrain → Stage Summary |
 | `insight_gc_evolution_line` | `GC Gap Evolution` | `line` | `dw.gc_evolution` (default Final GC Top 5) | Stage → Stage Results |
 | `insight_gc_evolution_deltas_table` | `GC Stage Deltas & Bonuses` | `table` | `dw.gc_evolution` | Rider → Stage Trajectory |
-| `insight_team_depth_bar` | `Team Top-10 Stage Coverage` | `bar` | `dw.team_depth` | Team → Full Roster |
-| `insight_team_depth_table` | `Team Competitiveness & Depth` | `table` | `dw.team_depth` | Team → Full Roster |
+| `insight_time_rules` | `GC under four timing rules` | `table` | `dw.gc_time_rules` | Rider → daily results |
 | `insight_olap_rollup_table` | `Team × Terrain OLAP Roll-Up` | `table` | `dw.olap_rollup` (`GROUP BY ROLLUP`) | **No-op** |
 | `insight_rider_specialisation_pivot_source` | `Rider Stage Percentile Source (Pivot Base)` | `table` *(hidden)* | `dw.rider_stage_results()` | **No-op** (Supporting source question) |
 | `insight_rider_specialisation_pivot` | `Rider Terrain Specialisation · Pivot (Full Race)` | `pivot` | MBQL Query Builder over `card__<source_id>` (`AVG(rank_percentile)`, `COUNT(*)`) | **No-op** (Full-race teaching card; no global filter mapping) |

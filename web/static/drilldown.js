@@ -64,17 +64,101 @@
     const note=level==='team'?`Team time uses ${model.filters.team_aggregation==='cumulative_top3'?'cumulative top 3':'per-stage top 3'}. Ranks retain the global ranking cohort; — means no eligible team standing.`:level==='rider'?'Includes exited riders. Available-stage time is their contribution within this scope, not a GC ranking.':level==='country'?`${role==='nationality'?'Grouped by rider nationality; unknown nationality is excluded.':'Grouped by team registration country; all rider nationalities are included.'} Membership follows the rider/team filters; completed rides also follow stage scope.`:level==='terrain'||level==='stage'?'Route distance is counted once per stage. Completed rides count rider–stage results in the active cohort.':'Finish rank is the recorded stage placing; the time column follows your selected time basis. Rankings are not recalculated for a subgroup.';
     return {level,levels,title:levelLabels[level],leaf:path.length===levels.length-1,rows,columns,note,metrics:{riders:riders.length,completed:facts.length,distance:total(stages,'distance_km'),stages:stages.length}};
   }
+  const measures = {
+    top10: 'Top-ten finishes', teams:'Registered teams', roster: 'Roster size', wins: 'Stage wins', podiums: 'Podium finishes',
+    time: 'Team & rider time', results: 'Completed rides', gap: 'Mean gap to stage winner'
+  };
+  const placings = {top10:10, podiums:3, wins:1};
+
+  function mergeFilters(active, detail, stages) {
+    const filters = {...active,...detail};
+    for (const field of ['team_keys','rider_keys']) {
+      if (Array.isArray(active[field]) && Array.isArray(detail[field]))
+        filters[field] = active[field].filter(key=>detail[field].some(value=>same(key,value)));
+    }
+    if (active.young_only) filters.young_only = true;
+    const permits = (s,f) =>
+      (f.stage_scope !== 'as_of' || s.stage_id <= Number(f.as_of_stage || 21)) &&
+      includes(f.stage_ids,s.stage_id) && includes(f.stage_types,s.stage_type);
+    if (detail.stage_scope || detail.stage_ids || detail.stage_types) {
+      filters.stage_scope = 'selection';
+      filters.stage_ids = stages.filter(s=>permits(s,active)&&permits(s,detail)).map(s=>s.stage_id);
+      delete filters.as_of_stage;
+      delete filters.stage_types;
+    }
+    return filters;
+  }
+
+  function measureResult(scope,metric,dimension) {
+    const facts=placings[metric] ? scope.facts.filter(f=>Number(f.finish_rank)<=placings[metric]) : scope.facts;
+    let value=facts.length;
+    if (metric==='teams') value=scope.teams.length;
+    if (metric==='roster') value=dimension==='terrain'?unique(facts,'rider_key'):scope.riders.length;
+    if (metric==='time') value=facts.reduce((n,f)=>n+Number(f.adjusted_time_seconds),0);
+    if (metric==='gap') {
+      const recorded = facts.filter(f=>f.gap_seconds != null);
+      value = recorded.length ? recorded.reduce((sum,f)=>sum+Number(f.gap_seconds),0)/recorded.length : null;
+    }
+    return {value,facts};
+  }
+
+  function metricView(model,dimension,role,path,metric) {
+    const base=getView(model,dimension,role,path);
+    if (!metric) return base;
+    if (metric==='teams' && base.level==='rider') metric='roster';
+    if (metric==='teams' && base.leaf) metric='results';
+    base.measureLabel = measures[metric];
+    const scope=scopeAt(model,dimension,role,path);
+    const {facts,value}=measureResult(scope,metric,dimension);
+    const col=(key,label,format='number')=>({key,label,format});
+    const unit=metric==='time'?'duration':metric==='gap'?'decimal':'number';
+    if (base.leaf) {
+      base.rows=facts.map(f=>({
+        key:String(dimension==='terrain'?f.rider_key:f.stage_id),
+        label:dimension==='terrain'?f.rider_name:'Stage '+f.stage_id,subtitle:dimension==='terrain'?f.team_name:f.stage_name,
+        date:f.stage_date,rider:f.rider_name,team:f.team_name,terrain:terrainLabel(f.stage_type),stage_id:f.stage_id,
+        finish_rank:f.finish_rank,distance:f.distance_km,raw:f.finish_time_seconds,adjusted:f.adjusted_time_seconds,
+        winner_gap:f.gap_seconds,bonus:f.time_bonus_seconds,penalty:f.time_penalty_seconds
+      })).sort((a,b)=>a.stage_id-b.stage_id||a.finish_rank-b.finish_rank);
+      base.columns=[col('label',dimension==='terrain'?'Rider / team':'Stage / route','label'),
+        col('date','Date','text'),col('terrain','Terrain','text'),col('finish_rank','Finish rank'),
+        col('distance','Km','decimal'),col('raw','Finish time','duration'),col('adjusted','Adjusted time','duration'),
+        col('winner_gap','Gap to stage winner (s)'),col('bonus','Bonus (s)'),col('penalty','Penalty (s)')];
+      if(dimension!=='terrain')base.columns.splice(2,0,col('rider','Rider','text'),col('team','Team','text'));
+    } else {
+      base.rows = base.rows.map(row=>{
+        const branch = scopeAt(model,dimension,role,[...path,row.key]);
+        const m=measureResult(branch,metric,dimension);
+        return {...row,measure:m.value,records:m.facts.length};
+      });
+      if (path.length && placings[metric]) base.rows = base.rows.filter(r=>r.records);
+      base.rows.sort((a,b)=>a.measure==null?1:b.measure==null?-1:
+        (metric==='gap'?a.measure-b.measure:b.measure-a.measure)||a.label.localeCompare(b.label));
+      base.columns=[col('label',levelLabels[base.level],'label'),col('measure',measures[metric]+(metric==='gap'?' (s)':''),unit)];
+      if(base.level==='rider')base.columns.push(col('country','Nationality','text'),col('status','Race status','text'));
+      if(base.level==='team')base.columns.push(col('country','Registration','text'));
+      if(base.level==='stage')base.columns.push(col('date','Date','text'),col('distance','Km','decimal'));
+      if (metric==='time'||metric==='gap')base.columns.push(col('records','Rider–stage results'));
+    }
+    base.measureText = metric==='time'?duration(value):value==null?'—':Number(value).toLocaleString('en-GB',{maximumFractionDigits:1});
+    base.metric = metric;
+    base.note=({teams:'Distinct teams registered in the selected country.',roster:'Distinct entrants, including riders who withdrew.',time:'Sum of adjusted times across completed rider–stage results.',gap:'Average raw finish-time gap to the stage winner, in seconds.',wins:'Recorded stage rank 1.',podiums:'Recorded stage ranks 1–3.',top10:'One appearance per rider and stage with recorded rank 1–10.',results:'One result per rider per completed stage.'})[metric];
+    return base;
+  }
+
+
   function validPath(model,dimension,role,path){const valid=[];for(const key of path){const view=getView(model,dimension,role,valid);if(view.leaf||!view.rows.some(r=>r.key===String(key)))break;valid.push(String(key));}return valid;}
-  function createNavigator({getMetadata,getFilters,apiPost,onChange}){
-    const state={dimension:'team',role:'registration',path:[],query:'',page:1,pageSize:25,model:null,loading:false,error:'',notice:''};
+  function createNavigator({getMetadata,getFilters,apiPost,onChange,initialMetric=null}){
+    const state={metric:initialMetric, sort:'metric', dimension:'team',role:'registration',path:[],query:'',page:1,pageSize:25,model:null,loading:false,error:'',notice:''};
     let sequence=0;
     const notify=()=>onChange(state);
-    const view=()=>state.model?getView(state.model,state.dimension,state.role,state.path):null;
+    const view=()=>state.model?metricView(state.model,state.dimension,state.role,state.path,state.metric):null;
+    const levels = new Map();
     function clearLocal(){state.query='';state.page=1;state.notice='';}
     async function load(){
       const request=++sequence,filters=structuredClone(getFilters());state.loading=true;state.error='';notify();
       try{
-        const [metadata,result,standing]=await Promise.all([getMetadata(),apiPost('/api/analytics/rider_stage_results',filters),apiPost('/api/analytics/team_standings',filters)]);
+        const [metadata,result,standing]=await Promise.all([getMetadata(),apiPost('/api/analytics/rider_stage_results',filters),state.metric ? {rows:[]} : apiPost('/api/analytics/team_standings',filters)]);
         if(request!==sequence)return;
         if(!metadata.riders?.length||!metadata.stages?.length)throw Error('Race metadata is unavailable. Try again after the data service is ready.');
         state.model=createModel({metadata,filters,results:result.rows,standings:standing.rows});
@@ -84,32 +168,55 @@
       }catch(error){if(request!==sequence)return;state.model=null;state.error=error.message||'Unable to load drill-down results.';}
       if(request===sequence){state.loading=false;notify();}
     }
-    function choose(key){const v=view();if(!v||v.leaf||!v.rows.some(r=>r.key===String(key)))return;state.path.push(String(key));clearLocal();notify();}
-    function up(index){if(index<0||index>state.path.length)return;state.path=state.path.slice(0,index);clearLocal();notify();}
-    function setDimension(value){if(!['team','terrain','country'].includes(value))return;state.dimension=value;state.path=[];clearLocal();notify();}
-    function setRole(value){if(!['registration','nationality'].includes(value))return;state.role=value;state.path=[];clearLocal();notify();}
-    const visibleRows=()=>{const q=state.query.toLocaleLowerCase();return (view()?.rows||[]).filter(r=>[r.label,r.subtitle,r.country].some(t=>String(t||'').toLocaleLowerCase().includes(q)));};
+    function enter(intent){
+      state.dimension=intent.dimension || 'team';state.role=intent.role || 'registration';
+      state.metric=measures[intent.metric]?intent.metric:'top10';
+      state.path=(intent.path||[]).map(String);state.entryLabel=intent.label||'';
+      levels.clear();clearLocal();
+    }
+    const positionKey=()=>JSON.stringify([state.dimension,state.role,state.metric,state.path]);
+    function rememberLevel(){levels.set(positionKey(),{page:state.page,query:state.query,sort:state.sort});}
+    function setMetric(value){if(!measures[value])return;state.metric=value;state.entryLabel='';clearLocal();notify();}
+    function choose(key){const v=view();if(!v||v.leaf||!v.rows.some(r=>r.key===String(key)))return;rememberLevel();state.path.push(String(key));clearLocal();notify();}
+    function up(index){if(index<0||index>state.path.length)return;state.path=state.path.slice(0,index);clearLocal();Object.assign(state,levels.get(positionKey())||{});notify();}
+    function setDimension(value){if(!['team','terrain','country'].includes(value))return;state.dimension=value;if(state.metric==='teams' && value!=='country')state.metric='roster';state.path=[];state.entryLabel='';levels.clear();clearLocal();notify();}
+    function setRole(value){if(!['registration','nationality'].includes(value))return;state.role=value;if(state.metric==='teams' && value!=='registration')state.metric='roster';state.path=[];state.entryLabel='';levels.clear();clearLocal();notify();}
+    const visibleRows=(activeView=view())=>{
+      const q=state.query.toLocaleLowerCase();
+      const rows=(activeView?.rows||[]).filter(r=>[r.label,r.subtitle,r.country,r.team].some(t=>String(t||'').toLocaleLowerCase().includes(q)));
+      return state.sort==='name'?rows.sort((a,b)=>a.label.localeCompare(b.label,undefined,{numeric:true})):rows;
+    };
+    function setSort(key){state.sort=key;state.page=1;notify();}
     function setQuery(value){state.query=value;state.page=1;notify();}
     function setPage(value){const max=Math.max(1,Math.ceil(visibleRows().length/state.pageSize));state.page=Math.max(1,Math.min(max,Number(value)||1));notify();}
-    return {state,load,view,choose,up,setDimension,setRole,setQuery,setPage,visibleRows,reset:()=>up(0)};
+    return {state,load,view,enter,setMetric,setSort,choose,up,setDimension,setRole,setQuery,setPage,visibleRows,reset:()=>up(0)};
   }
   function render(nav){
     const s=nav.state,v=nav.view();
-    const choices=[['team','01','Team','Teams → riders → stages'],['terrain','02','Stage terrain','Terrain → stages → riders'],['country','03','Country','Choose a country role']];
+    const choices=[['team','Team'],['terrain','Stage terrain'],['country','Country']];
     let html=`
-    <div class="drill-dimensions" role="group" aria-label="Drill-down dimension">${choices.map(([key,n,title,hint])=>`<button type="button" class="drill-dimension ${s.dimension===key?'selected':''}" data-dimension="${key}" aria-pressed="${s.dimension===key}"><span class="drill-dimension-number">${n}</span><span><strong>${title}</strong><small>${hint}</small></span><span aria-hidden="true">↘</span></button>`).join('')}</div>
+    <div class="drill-dimensions" role="group" aria-label="Drill-down dimension">${choices.map(([key,title])=>`<button type="button" class="drill-dimension ${s.dimension===key?'selected':''}" data-dimension="${key}" aria-pressed="${s.dimension===key}"><strong>${title}</strong><span aria-hidden="true">↘</span></button>`).join('')}</div>
     ${s.dimension==='country'?`<div class="drill-role"><label for="drill-country-role">Country role</label><select id="drill-country-role" class="control-select"><option value="registration" ${s.role==='registration'?'selected':''}>Team registration country</option><option value="nationality" ${s.role==='nationality'?'selected':''}>Rider nationality</option></select></div>`:''}`;
+    if(s.metric)html+=`<div class="drill-measure-select"><label for="drill-measure">Measure</label><select id="drill-measure" class="control-select">${Object.entries(measures).filter(([key])=>key!=='teams'||(s.dimension==='country' && s.role==='registration')).map(([key,label])=>`<option value="${key}" ${key===s.metric?'selected':''}>${label}</option>`).join('')}</select></div>`;
     if(s.loading)return html+'<div class="card drill-feedback" role="status"><p>Loading results…</p></div>';
     if(s.error)return html+`<div class="card drill-feedback state-warning" role="alert"><h3>Unable to load Drill Down</h3><p>${escape(s.error)}</p><button type="button" class="btn-primary btn-compact" data-drill-retry>Try again</button></div>`;
     if(!v)return html;
-    html+=`<nav class="drill-journey" aria-label="Drill-down levels">${v.levels.map((level,i)=>{let detail=i===0?'All in scope':'Select a parent';if(i>0&&i<=s.path.length){const prev=getView(s.model,s.dimension,s.role,s.path.slice(0,i-1));detail=prev.rows.find(r=>r.key===s.path[i-1])?.label||s.path[i-1];}return `<button type="button" data-drill-level="${i}" class="hierarchy-step ${i===s.path.length?'current':i<s.path.length?'visited':''}" ${i>s.path.length?'disabled':''} ${i===s.path.length?'aria-current="step"':''}><span class="hierarchy-step-number">${String(i+1).padStart(2,'0')}</span><span><strong>${levelLabels[level]}</strong><small title="${escape(detail)}">${escape(detail)}</small></span><span class="hierarchy-step-arrow" aria-hidden="true">→</span></button>`;}).join('')}</nav>`;
+    const f=s.model.filters;
+    const stageScope=f.stage_scope==='selection'
+      ? (s.model.stages.length ? s.model.stages.map(stage=>'S'+stage.stage_id).join(', ') : 'No selected stages')
+      : f.stage_scope==='as_of'?'Through stage '+f.as_of_stage:'Full race';
+    const memberScope=[...(Array.isArray(f.team_keys)?s.model.teams.map(t=>t.team_name):[]),
+      ...(Array.isArray(f.rider_keys)?s.model.riders.map(r=>r.rider_name):[])];
+    const entry=[s.entryLabel,stageScope,...memberScope].filter(Boolean).join(' · ');
+    html += '<p class="drill-entry-scope">'+escape(entry)+'</p>';
+    html+=`<nav class="drill-journey" aria-label="Drill-down levels">${v.levels.map((level,i)=>{let detail=i===0?'All in scope':'';if(i>0&&i<=s.path.length){const prev=getView(s.model,s.dimension,s.role,s.path.slice(0,i-1));detail=prev.rows.find(r=>r.key===s.path[i-1])?.label||s.path[i-1];}return `<button type="button" data-drill-level="${i}" class="hierarchy-step ${i===s.path.length?'current':i<s.path.length?'visited':''}" ${i>s.path.length?'disabled':''} ${i===s.path.length?'aria-current="step"':''}><span class="hierarchy-step-number">${String(i+1).padStart(2,'0')}</span><span><strong>${levelLabels[level]}</strong>${detail?`<small title="${escape(detail)}">${escape(detail)}</small>`:''}</span><span class="hierarchy-step-arrow" aria-hidden="true">→</span></button>`;}).join('')}</nav>`;
     if(s.notice)html+=`<p class="drill-notice" role="status">${escape(s.notice)}</p>`;
-    const matched=nav.visibleRows(),pages=Math.max(1,Math.ceil(matched.length/s.pageSize)),page=Math.min(s.page,pages),start=(page-1)*s.pageSize,shown=matched.slice(start,start+s.pageSize);
+    const matched=nav.visibleRows(v),pages=Math.max(1,Math.ceil(matched.length/s.pageSize)),page=Math.min(s.page,pages),start=(page-1)*s.pageSize,shown=matched.slice(start,start+s.pageSize);
     const cells=(row,col)=>{const value=row[col.key];if(col.format==='label')return `<${v.leaf?'span':'button type="button"'} class="drill-row-label" ${v.leaf?'':`data-drill-choose="${escape(row.key)}"`}><strong>${escape(value)}</strong>${row.subtitle?`<small>${escape(row.subtitle)}</small>`:''}</${v.leaf?'span':'button'}>`;if(col.format==='duration')return duration(value);if(value==null)return '—';return escape(col.format==='decimal'?Number(value).toLocaleString('en-GB',{maximumFractionDigits:1}):col.format==='number'?Number(value).toLocaleString('en-GB'):value);};
     html+=`<section class="card drill-results" aria-labelledby="drill-level-heading"><div class="drill-results-header"><div><span class="card-kicker">LEVEL ${s.path.length+1} OF ${v.levels.length} </span><h3 id="drill-level-heading" tabindex="-1">${v.title}<span>${v.rows.length}</span></h3></div><div class="drill-navigation"><button type="button" class="btn-secondary btn-compact" data-drill-up ${s.path.length?'':'disabled'}>← Up one level</button><button type="button" class="text-link-btn" data-drill-reset ${s.path.length?'':'disabled'}>Reset path</button></div></div>
-    <div class="drill-context">${v.level==='rider'?'':`<span><b>${v.metrics.riders}</b> riders</span>`}<span><b>${v.metrics.stages}</b> stages in scope</span><span><b>${v.metrics.completed.toLocaleString('en-GB')}</b> completed rides</span></div>
+    <div class="drill-context">${s.metric?`<span class="drill-selected-measure">${escape(v.measureLabel||measures[s.metric])} · ${escape(v.measureText)}${s.metric==='gap'?' s':''}</span>`:''}${v.level==='rider'?'':`<span><b>${v.metrics.riders}</b> riders</span>`}<span><b>${v.metrics.stages}</b> stages in scope</span>${v.metric==='results'?'':`<span><b>${v.metrics.completed.toLocaleString('en-GB')}</b> completed rides</span>`}</div>
     <details class="drill-measure-details"><summary>Measure definitions</summary><p class="drill-measure-note">${escape(v.note)}</p></details>
-    <div class="drill-table-tools"><label class="drill-search-label" for="drill-search">Find in this level</label><input type="search" id="drill-search" class="control-select drill-search" placeholder="Search ${v.title.toLowerCase()}…" value="${escape(s.query)}"/></div>
+    <div class="drill-table-tools"><label class="drill-search-label" for="drill-search">Find in this level</label><input type="search" id="drill-search" class="control-select drill-search" placeholder="Search ${v.title.toLowerCase()}…" value="${escape(s.query)}"/><label for="drill-sort">Order</label><select id="drill-sort" class="control-select"><option value="metric">Measure / stage order</option><option value="name" ${s.sort==='name'?'selected':''}>Name</option></select></div>
     <div class="drill-grid-scroll" tabindex="0" aria-label="${escape(v.title)} results; scroll horizontally for all columns"><table class="data-table"><thead><tr>${v.columns.map(c=>`<th scope="col" class="${c.format==='number'||c.format==='decimal'||c.format==='duration'?'num-col':''}">${escape(c.label)}</th>`).join('')}${v.leaf?'':'<th scope="col"><span class="sr-only">Next level</span></th>'}</tr></thead><tbody>${shown.map(r=>`<tr ${v.leaf?'':`data-drill-choose="${escape(r.key)}" class="drill-selectable"`}>${v.columns.map(c=>`<td class="${['number','decimal','duration'].includes(c.format)?'num-col':''}">${cells(r,c)}</td>`).join('')}${v.leaf?'':'<td class="drill-row-arrow" aria-hidden="true">↘</td>'}</tr>`).join('')}</tbody></table>${!matched.length?`<div class="drill-empty"><h4>${s.query?'No matching rows':'No results at this level'}</h4><p>${s.query?'Try another search.':'Try a different branch or adjust the global filters.'}</p></div>`:''}</div>
     <div class="drill-pagination"><span>${matched.length?`${start+1}–${Math.min(start+s.pageSize,matched.length)}`:'0'} of ${matched.length} ${s.query?`matching · ${v.rows.length} total`:v.title.toLowerCase()}</span><div><button type="button" class="btn-secondary btn-compact" data-drill-page="${page-1}" ${page===1?'disabled':''}>Previous</button><span aria-live="polite">${page} / ${pages}</span><button type="button" class="btn-secondary btn-compact" data-drill-page="${page+1}" ${page===pages?'disabled':''}>Next</button></div></div></section>`;
     return html;
@@ -133,10 +240,10 @@
       if(a.drillChoose!==undefined||a.drillLevel!==undefined||a.drillUp!==undefined||a.drillPage!==undefined||a.drillReset!==undefined){const heading=element.querySelector('#drill-level-heading');heading?.focus({preventScroll:true});heading?.scrollIntoView({behavior:'smooth',block:'nearest'});}
     });
     element.addEventListener('input',event=>{if(event.target.id==='drill-search')nav.setQuery(event.target.value);});
-    element.addEventListener('change',event=>{if(event.target.id==='drill-country-role'){nav.setRole(event.target.value);element.querySelector('#drill-country-role')?.focus({preventScroll:true});}});
+    element.addEventListener('change',event=>{if(event.target.id==='drill-measure')nav.setMetric(event.target.value);if(event.target.id==='drill-sort')nav.setSort(event.target.value);if(event.target.id==='drill-country-role'){nav.setRole(event.target.value);element.querySelector('#drill-country-role')?.focus({preventScroll:true});}});
     return nav;
   }
 
-  const api={createModel,getView,validPath,escape,duration,levelsFor,levelLabels,createNavigator,render,mount};
+  const api={createModel,getView,mergeFilters,metricView,validPath,escape,duration,levelsFor,levelLabels,createNavigator,render,mount};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.RaceDrilldown=api;
 })(typeof window!=='undefined'?window:globalThis);

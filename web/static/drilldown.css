@@ -5,12 +5,12 @@
 .drill-intro p { color:#657c8d; font-size:12px; line-height:1.7; margin:0; }
 .drill-olap-tag { flex-shrink:0; border:1px solid #d7e6e7; background:#eef8f7; color:#25726f; font-size:9px; font-weight:650; letter-spacing:1.2px; border-radius:5px; padding:9px 12px; }
 .drill-dimensions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
-.drill-dimension { cursor:pointer; display:flex; align-items:center; gap:14px; padding:20px; border:1px solid #dee6ed; border-radius:10px; background:#fff; text-align:left; font:inherit; color:#567082; transition:border-color .15s, background .15s; }
+.drill-dimension { cursor:pointer; display:flex; align-items:center; gap:12px; padding:12px 16px; min-height:44px; border:1px solid #dee6ed; border-radius:10px; background:#fff; text-align:left; font:inherit; color:#567082; transition:border-color .15s, background .15s; }
 .drill-dimension.selected { border-color:#e0c73b; background:#fffcea; box-shadow:inset 0 3px 0 #ffdf32; }
 .drill-dimension:hover { border-color:#688d9a; }
 .drill-dimension-number { font-size:11px; font-weight:700; color:#8d9ba7; }
 .drill-dimension.selected .drill-dimension-number { color:#887213; }
-.drill-dimension strong { display:block; font-size:15px; color:#213d50; margin-bottom:7px; }
+.drill-dimension strong { display:block; font-size:15px; color:#213d50; }
 .drill-dimension small { display:block; font-size:10px; line-height:1.6; }
 .drill-dimension>span:last-child { margin-left:auto; font-size:22px; color:#1d7378; }
 .drill-role { display:flex; align-items:center; flex-wrap:wrap; gap:12px; padding:0 3px; font-size:12px; color:#415c70; }
@@ -61,7 +61,19 @@ button.drill-row-label { cursor:pointer; }
 .drill-empty p,.drill-feedback p { font-size:12px; line-height:1.6; }
 .drill-notice { padding:12px 16px; border-left:3px solid #d7b835; background:#fffceb; border-radius:4px; color:#76652e; font-size:12px; margin:0; }
 .drill-workspace button:focus-visible,.drill-workspace input:focus-visible,.drill-workspace select:focus-visible,.drill-grid-scroll:focus-visible { outline:3px solid #c4ab27; outline-offset:2px; }
-@media(max-width:1100px) { .drill-dimension { padding:16px; gap:9px; } .hierarchy-step { padding:13px 10px; gap:8px; } .hierarchy-step-arrow { display:none; } .drill-olap-tag { display:none; } }
-@media(max-width:760px) { .drill-intro h3 { font-size:23px; } .drill-dimensions { gap:8px; } .drill-dimension { flex-direction:column; align-items:flex-start; padding:14px 11px; } .drill-dimension strong { font-size:13px; margin-bottom:4px; } .drill-dimension small { font-size:9px; } .drill-dimension>span:last-child { display:none; } .drill-journey { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); } .drill-results-header { padding:20px 16px 15px; align-items:flex-start; flex-direction:column; } .drill-navigation { width:100%; justify-content:space-between; } .drill-context { padding:0 16px; gap:12px; font-size:10px; } .drill-context b { font-size:12px; } .drill-measure-note { padding:0 16px 16px; } .drill-table-tools { padding:12px 16px; gap:8px; } .drill-search-label { width:100%; } .drill-search { width:100%; } .drill-table-tools>span { display:none; } .drill-pagination { padding:12px 16px; } .drill-role select { max-width:100%; } }
+@media(max-width:1100px) { .drill-dimension { padding:12px 14px; gap:9px; } .hierarchy-step { padding:13px 10px; gap:8px; } .hierarchy-step-arrow { display:none; } .drill-olap-tag { display:none; } }
+@media(max-width:760px) { .drill-intro h3 { font-size:23px; } .drill-dimensions { gap:8px; } .drill-dimension { padding:9px 11px; } .drill-dimension strong { font-size:13px; } .drill-dimension small { font-size:9px; } .drill-dimension>span:last-child { display:none; } .drill-journey { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); } .drill-results-header { padding:20px 16px 15px; align-items:flex-start; flex-direction:column; } .drill-navigation { width:100%; justify-content:space-between; } .drill-context { padding:0 16px; gap:12px; font-size:10px; } .drill-context b { font-size:12px; } .drill-measure-note { padding:0 16px 16px; } .drill-table-tools { padding:12px 16px; gap:8px; } .drill-search-label { width:100%; } .drill-search { width:100%; } .drill-table-tools>span { display:none; } .drill-pagination { padding:12px 16px; } .drill-role select { max-width:100%; } }
 
 .drill-workspace .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+/* Keep the sort label with its control beside the stage / rider search. */
+.drill-table-tools #drill-sort { width:auto; max-width:100%; }
+.hierarchy-step:disabled { color:#496071; opacity:1; }
+@media (max-width:760px) {
+  .drill-table-tools { display:grid; grid-template-columns:auto minmax(0,1fr); }
+  .drill-table-tools input { grid-column:1 / -1; }
+  .drill-table-tools input, .drill-table-tools #drill-sort { width:100%; }
+  .drill-journey:has(> :last-child:nth-child(3)) { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .hierarchy-step { flex-direction:column; align-items:flex-start; }
+  .hierarchy-step > span:nth-child(2) { width:100%; }
+}
