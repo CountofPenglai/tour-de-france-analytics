@@ -29,6 +29,8 @@
   --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 
+  --form-control-height: 36px;
+
   --radius-sm: 4px;
   --radius-md: 8px;
   --shadow-card: 0 1px 3px rgba(20, 22, 25, 0.05);
@@ -268,6 +270,16 @@ code {
 
 .mt-compact {
   margin-top: 6px;
+}
+
+/* Match single-line fields across filters and analytical pages. */
+select,
+input:not([type]),
+input[type="text"],
+input[type="search"],
+input[type="number"] {
+  box-sizing: border-box;
+  height: var(--form-control-height);
 }
 
 .control-select {
