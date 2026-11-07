@@ -3,7 +3,7 @@
 
   const pages = window.RacePages ||= {};
   const types = ['flat', 'hilly', 'mountain', 'individual time-trial'];
-  const terrainLabel = {flat:'Flat', hilly:'Hilly', mountain:'Mountain', 'individual time-trial':'ITT'};
+  const terrainLabel = {flat:'Flat', hilly:'Hilly', mountain:'Mountain', 'individual time-trial':'Individual Time Trial'};
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char =>
     ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));
   const available = value => value != null && Number.isFinite(Number(value));
@@ -85,7 +85,7 @@
       return '<div class="tt-depth-row">' + btn('roster',id,title,'','tt-team-name') + '<div class="tt-mark">' + edges + '</div>' +
         '<span class="tt-count">' + btn('contributors',id,num(t.top10_distinct_riders),'title="Top-10 contributors"') + ' / ' +
         btn('roster',id,num(t.participants),'title="Starting roster"') + '</span>' +
-        btn('terrain',id,num(t.top10_finishes),'aria-label="' + num(t.top10_finishes) + ' top-10 finishes by terrain for ' + title + '"','tt-finishes') + '</div>';
+        btn('terrain',id,num(t.top10_finishes),'aria-label="' + num(t.top10_finishes) + ' top-10 finishes by stage type for ' + title + '"','tt-finishes') + '</div>';
     }).join('');
     return '<div class="tt-legend"><span><i></i>Top-10 riders</span><span><i></i>Starters</span></div>' +
       '<div class="tt-depth-header"><span>Team</span><span>Top-10 / starters</span><span>Top-10 finishes</span></div>' +
@@ -98,7 +98,7 @@
     const panel = '<table class="tt-compare"><thead><tr><th></th><th scope="col">A</th>' + (b?'<th scope="col">B</th>':'') +
       '</tr></thead><tbody>' + metric('Stage wins',t=>btn('wins',t.team_key,num(t.wins))) +
       metric('Stages with a top 10',t=>num(t.top10_stages)+' / '+num(t.selected_stage_count)) + '</tbody></table>';
-    return '<aside class="tt-compare-box"><h4>Wins and coverage</h4>' +
+    return '<aside class="tt-compare-box"><h4>Wins and Coverage</h4>' +
       select('compare-a','Team A',teamChoices(teams),a.team_key) +
       (b?select('compare-b','Team B',teamChoices(teams.filter(t=>t!==a)),b.team_key):'') + panel + '</aside>';
   }
@@ -124,7 +124,7 @@
     const members = roster.filter(r=>r.team_key===team.team_key);
     const totals = types.map(t=>members.reduce((n,r)=>n+Number(r.terrain_top10?.[t] || 0),0));
     const max = Math.max(1,...totals);
-    return block('breakdown',heading('Top-10 finishes by terrain') + note(team.team_name) +
+    return block('breakdown',heading('Top-10 Finishes by Stage Type') + note(team.team_name) +
       '<div class="tt-terrain-break">' + types.map((t,i)=>
         btn('terrain-days',team.team_key,'<span>'+terrainLabel[t]+'</span>'+bar(totals[i],max)+'<b>'+num(totals[i])+'</b><small>' +
           num(stageScope(ctx,t).length) + ' stages</small>', 'data-terrain="' + esc(t) + '"','tt-break-row')).join('') + '</div>');
@@ -153,7 +153,7 @@
       if (rider) {
         const days = detailRows?.filter(r=>r.rider_key===rider.rider_key);
         details += '<h4 id="tt-daily">' + esc(rider.rider_name) + ' · daily adjusted time</h4>' + (detailError ? empty('Daily results unavailable. Select a rider to retry.') : days == null ? note('Loading daily results…') : days.length ?
-          table(['Stage','Date','Terrain','Adjusted time',''],days.map(r=>[
+          table(['Stage','Date','Stage Type','Adjusted Time',''],days.map(r=>[
             num(r.stage_id),esc(r.stage_date),esc(terrainLabel[r.stage_type]),time(r.adjusted_time_seconds),
             btn('compare-day',r.stage_id,'Compare teammates')]),true) : empty('No completed stages in this scope.'));
         const day = days?.find(r=>r.stage_id===prefs.burdenStage);
@@ -161,7 +161,7 @@
           detailRows.filter(r=>r.stage_id===day.stage_id).map(r=>[esc(r.rider_name),num(r.finish_rank),time(r.adjusted_time_seconds)]));
       }
     }
-    return block('burden',heading('Whole-team time burden',select('burden-sort','Order',
+    return block('burden',heading('Whole-Team Time Burden',select('burden-sort','Order',
       [['most','Most time'],['least','Least time'],['results','Completed results']],prefs.burdenSort)) +
       note('Adjusted time adds every completed rider-stage, including days ridden before an exit.') + summary +
       (details?'<div id="tt-burden-detail">'+details+'</div>':''));
@@ -177,7 +177,7 @@
       return [esc(name),num(stage?.rank),time(stage?.total_seconds),num(stage?.contributor_count),
         num(cumulative?.rank),time(cumulative?.total_seconds),num(cumulative?.contributor_count)];
     });
-    return block('standings',heading('Team standings',select('standings-method','Timing',
+    return block('standings',heading('Team Standings',select('standings-method','Timing',
       [['stage_top3','Fastest three each stage'],['cumulative_top3','Fastest three over the scope'],['compare','Compare both methods']],prefs.standingsMethod)) +
       note((filters.time_basis==='finish'?'Raw':'Adjusted') + ' time · ' + (comparisonMode?'Stage selects three each day. Cumulative selects three who finished the full scope.':alternate?'Three riders must each finish all selected stages.':'Each selected stage requires three team finishers.')) +
       (comparisonMode && compared.length ? table(['Team','Stage rank','Stage time','Stage riders','Cumulative rank','Cumulative time','Cumulative riders'],compared,true) : standings.length ? table(['Rank','Team','Total time','Gap','Contributors'],standings.map(r=>
@@ -212,7 +212,7 @@
       const others = teams.filter(t=>t!==a);
       const b = byKey(others,'team_key',p.teamB) || others.find(t=>/UAE/i.test(t.team_name)) || others[0];
       p.teamB = b?.team_key;
-      const hero = block('depth',heading('How many starters reached the top ten?',select('depth-sort','Sort teams',
+      const hero = block('depth',heading('How Many Starters Reached the Top Ten?',select('depth-sort','Sort teams',
         [['depth','Top-10 riders'],['appearances','Top-10 finishes'],['roster','Starting roster']],p.depthSort)) +
         '<div class="tt-hero"><div>'+depthChart(teams,p)+'</div>'+comparison(teams,a,b)+'</div>');
       paint(ctx, hero + rosterBlock(roster,team,p) + terrainBreakdown(ctx,roster,team) +
@@ -305,7 +305,7 @@
     const ordered = [...subjects].filter(r=>available(r.terrain_rank_gain)).sort(moverOrder);
     const cohortSize = ordered[0]?.ranked_entities;
     const rankScope = filters.rank_scope==='filtered' ? 'matching' : 'overall';
-    const movers = '<aside class="tt-rank-side"><h4>Mountain rank gains</h4>' + (ordered.length?
+    const movers = '<aside class="tt-rank-side"><h4>Mountain Rank Gains</h4>' + (ordered.length?
       note('Flat and hilly stages form the baseline. Both ranks compare '+num(cohortSize)+' '+names+(cohortSize===1?'':'s')+' ('+rankScope+').') +
       table([prefs.entityKind==='team'?'Team':'Rider','Baseline','Mountain','Gain'],ordered.map(r=>[
         btn('focus-subject',r.entity_key,esc(r.entity_name)),num(r.baseline_rank),num(r.mountain_rank),signed(r.terrain_rank_gain)]),true) :
@@ -315,7 +315,7 @@
     const samples = selected.map((e,i)=>['<span class="tt-series-key tt-series-'+i+'"></span>'+esc(e.entity_name),
       ...types.map(t=>{const c=e.cells[t];return c ? btn('profile-days',e.entity_key,num(c.speed_kmh,2)+' <small>('+num(c.sample_count)+')</small>',
         'data-terrain="'+t+'" title="Speed in km/h and completed results"') : '—';}),rankChange(e)]);
-    return block('profiles',heading('Who gains ground in the mountains?',controls) +
+    return block('profiles',heading('Who Gains Ground in the Mountains?',controls) +
       '<div class="tt-profile-grid"><div>'+selectors+dotProfile(selected)+table(['km/h (results)',...types.map(t=>terrainLabel[t]),'Baseline → mountain rank'],samples)+
       note(prefs.entityKind==='team' ? 'Team speed includes every member of each matching team. Each ride contributes its distance and raw finish time.' :
         'Speed uses all kilometres ridden divided by raw finish time.')+'</div>'+movers+'</div>');
@@ -344,7 +344,7 @@
         c ? num(100*podiumRate(c),1)+'%' : '—', c ? dayButton(r,'podiums',num(c.podium_count))+' / '+dayButton(r,'results',num(c.sample_count)) : '0 / 0',
         c ? dayButton(r,'gap',num(c.mean_winner_gap_seconds,1)) : '—'];
     });
-    return block('mountain',heading('Mountain podiums and gaps','<div class="analysis-toolbar">'+controls+'</div>') +
+    return block('mountain',heading('Mountain Podiums and Gaps','<div class="analysis-toolbar">'+controls+'</div>') +
       note('Mean gap includes zero-second finishes.') +
       (riders.length ? table(['Rider','Team','Podium frequency','Podiums / mountain stages completed','Mean gap to stage winner (s)'],rows,true) :
         empty('No completed mountain stages in this scope.')));
@@ -352,7 +352,7 @@
   pages.rider_specialisation = async function renderTerrainPage(ctx) {
     const rows = await ctx.report('terrain_performance');
     if (!ctx.isCurrent()) return;
-    if (!rows.length) return paint(ctx,empty('No terrain results in this scope.'));
+    if (!rows.length) return paint(ctx,empty('No stage type results in this scope.'));
     const model = entities(rows), p=ctx.preferences;
     p.entityKind = p.entityKind==='team' && model.team.length ? 'team' : 'rider';
     p.mountainSort ||= 'rate';
@@ -365,7 +365,7 @@
       const control = btn('close-evidence',detail.team,'Close');
       const title = team.entity_name + ' · ' + terrainLabel[detail.terrain] + ' rides';
       let body = note('Loading full-team results…');
-      if (evidenceFailed) body = empty('Daily results unavailable. Select the terrain again to retry.');
+      if (evidenceFailed) body = empty('Daily results unavailable. Select the stage type again to retry.');
       else if (evidenceRows) body = evidenceRows.length ? table(['Stage','Date','Rider','Distance (km)','Finish rank','Raw finish time','Winner gap'],
         evidenceRows.map(r=>[num(r.stage_id),esc(r.stage_date),esc(r.rider_name),num(r.distance_km,1),num(r.finish_rank),time(r.finish_time_seconds),num(r.gap_seconds)+' s']),true) :
         empty('No completed rides in this scope.');
@@ -398,7 +398,7 @@
         selected = [];
         const label = p.entityKind==='team' ? 'teams' : 'riders';
         const control = select('entity-kind','Compare',[['rider','Riders'],['team','Teams']],p.entityKind);
-        paint(ctx,block('profiles',heading('Who gains ground in the mountains?',control) +
+        paint(ctx,block('profiles',heading('Who Gains Ground in the Mountains?',control) +
           empty('No '+label+' completed a stage in this scope.')));
         return;
       }

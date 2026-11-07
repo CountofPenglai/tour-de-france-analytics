@@ -22,6 +22,63 @@
   border-radius: .6rem;
   background: var(--bg-subtle);
 }
+.route-page .route-directory-controls {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  flex-wrap: wrap;
+}
+.route-page .route-type-filter {
+  position: relative;
+  color: var(--ink-secondary);
+  font-size: .82rem;
+  font-weight: 650;
+}
+.route-page .route-type-filter summary {
+  min-width: 10.5rem;
+  padding: .48rem 2rem .48rem .72rem;
+  border: 1px solid var(--border-strong);
+  border-radius: .55rem;
+  background: white;
+  color: var(--ink-primary);
+  cursor: pointer;
+  list-style: none;
+  position: relative;
+}
+.route-page .route-type-filter summary::-webkit-details-marker {display:none}
+.route-page .route-type-filter summary::after {
+  content: "⌄";
+  position: absolute;
+  right: .7rem;
+  top: 50%;
+  transform: translateY(-58%);
+}
+.route-page .route-type-filter[open] summary {
+  border-color: var(--accent-green);
+  box-shadow: 0 0 0 2px color-mix(in srgb,var(--accent-green) 18%,transparent);
+}
+.route-page .route-type-menu {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + .35rem);
+  right: 0;
+  display: grid;
+  min-width: 13rem;
+  padding: .4rem;
+  border: 1px solid var(--border-line);
+  border-radius: .55rem;
+  background: white;
+  box-shadow: 0 10px 28px rgba(24,57,74,.15);
+}
+.route-page .route-type-menu label {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .45rem .5rem;
+  border-radius: .35rem;
+  cursor: pointer;
+}
+.route-page .route-type-menu label:hover {background:var(--bg-subtle)}
 .route-page .route-option {
   padding: .4rem .68rem;
   border: 0;
@@ -44,6 +101,10 @@
 .route-page [data-scroll="directory"],
 .route-page [data-scroll="countries"] {
   max-height: 19rem;
+}
+.route-page [data-scroll="stage-top-ten"] {
+  max-height: none;
+  overflow: visible;
 }
 .route-page .route-table-scroll thead th {
   position: sticky;

@@ -54,10 +54,10 @@ The generated Metabase email and password are in **`.runtime/admin-credentials.j
 | Riders & Teams | Compare roster depth, top-ten appearances and stage coverage. Follow the contributions to riders and individual days, then inspect team standings under either top-three rule. |
 | Stages & Routes | Sort for the longest route, list time trials, or inspect a stage’s leading finishers and each team’s share of the top ten. |
 | Country Participation | Compare registration and nationality counts, best final GC rank, wins, and podiums. Open the relevant roster or medal-winning results. |
-| Drill Down | Choose Team, Terrain or Country and a measure. Follow the hierarchy to the contributing results and return to the original comparison. |
-| Exploratory Analysis | Compare terrain speeds and mountain podiums in **Terrain fit**, follow cumulative time and reshuffles in **Decisive stages**, and replay GC with or without bonuses and penalties in **Time rules**. |
+| Drill Down | Choose Team, Stage Type or Country and a measure. Follow the hierarchy to the contributing results and return to the original comparison. |
+| Exploratory Analysis | Compare stage-type speeds and mountain podiums in **Stage Type Fit**, follow cumulative time and reshuffles in **Decisive Stages**, and replay GC with or without bonuses and penalties in **Time Rules**. |
 
-Filters support final-race, as-of-stage, and selected-stage scopes; terrain, team, rider, and young-rider selections; finish versus adjusted time; overall versus filtered-group ranks; and per-stage top-three versus cumulative top-three team methods. Applied filters remain available when navigating detail views. The native Metabase dashboard contains **33 displayed analytical cards plus one supporting question**, across five tabs.
+Filters support final-race, as-of-stage, and selected-stage scopes; stage type, team, rider, and young-rider selections; finish versus adjusted time; overall versus filtered-group ranks; and per-stage top-three versus cumulative top-three team methods. Applied filters remain available when navigating detail views. The native Metabase dashboard contains **33 displayed analytical cards plus one supporting question**, across five tabs.
 
 ### Reading the results
 

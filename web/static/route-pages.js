@@ -8,7 +8,7 @@
   const empty = message => `<p class="analysis-empty">${esc(message)}</p>`;
   const note = message => `<p class="analysis-note">${esc(message)}</p>`;
   const head = title => `<h3 class="analysis-title">${esc(title)}</h3>`;
-  const terrainName = value => value === "individual time-trial" ? "Individual time trial" :
+  const stageTypeName = value => value === "individual time-trial" ? "Individual Time Trial" :
     String(value ?? "").replace(/^./, first => first.toUpperCase());
   const route = stage => `${stage.start_location_name} → ${stage.finish_location_name}`;
   const clock = seconds => {
@@ -55,28 +55,53 @@
     root.querySelector("[data-evidence-heading]")?.focus();
   }
 
-  function stageList(stages, mode) {
-    const list = stages.filter(row => mode !== "itt" || row.stage_type === "individual time-trial");
-    return list.sort((a,b) => (mode === "longest" ? n(b.distance_km) - n(a.distance_km) : 0)
-      || n(a.stage_order) - n(b.stage_order));
+  function stageList(stages, mode, types, order) {
+    const list = stages.filter(row => !types.length || types.includes(row.stage_type));
+    return list.sort((a,b) => {
+      if (order?.key === "date") {
+        const compared = String(a.stage_date).localeCompare(String(b.stage_date));
+        if (compared) return order.desc ? -compared : compared;
+      }
+      if (order?.key === "distance") {
+        const compared = n(a.distance_km) - n(b.distance_km);
+        if (compared) return order.desc ? -compared : compared;
+      }
+      return (mode === "longest" ? n(b.distance_km) - n(a.distance_km) : 0)
+        || n(a.stage_order) - n(b.stage_order);
+    });
   }
 
-  function directoryMarkup(stages, mode, selectedId) {
-    const options = [["order","Stage order"],["longest","Longest routes"],["itt","Individual time trials"]];
-    const directoryRows = stages.map(s => `<tr${n(s.stage_id) === selectedId ? ' class="route-selected"' : ""}>
-      <td>${button("choose-stage", s.stage_id, `Stage ${s.stage_id}`, {pressed:n(s.stage_id) === selectedId, label:`Open stage ${s.stage_id}, ${route(s)}`})}</td>
-      <td>${esc(route(s))}</td><td>${esc(s.stage_date)}</td><td>${esc(terrainName(s.stage_type))}</td>
+  function sortHeading(key, label, order) {
+    const sorted = order?.key === key;
+    return `<th scope="col"${sorted ? ` aria-sort="${order.desc ? "descending" : "ascending"}"` : ""}>${button(
+      "stage-sort", key, `${label}${sorted ? (order.desc ? " ↓" : " ↑") : ""}`,
+      {className:"route-sort", label:`Sort by ${label}`}
+    )}</th>`;
+  }
+
+  function directoryMarkup(stages, mode, spotlightId, types, order, allStages, typeMenuOpen) {
+    const options = [["order","Stage Order"],["longest","Longest Routes"]];
+    const stageTypes = [...new Set(allStages.map(s => s.stage_type))].sort((a,b) => stageTypeName(a).localeCompare(stageTypeName(b)));
+    const typeLabel = !types.length ? "All Stage Types" : types.length === 1 ? stageTypeName(types[0]) : `${types.length} Stage Types`;
+    const directoryRows = stages.map(s => `<tr${n(s.stage_id) === spotlightId ? ' class="route-selected"' : ""}>
+      <td>${button("choose-stage", s.stage_id, `Stage ${s.stage_id}`, {pressed:n(s.stage_id) === spotlightId, label:`Open stage ${s.stage_id}, ${route(s)}`})}</td>
+      <td>${esc(s.start_location_name)}</td><td>${esc(s.finish_location_name)}</td><td>${esc(s.stage_date)}</td><td>${esc(stageTypeName(s.stage_type))}</td>
       <td>${esc(n(s.distance_km))}</td><td>${esc((s.winner_names || []).join(", ") || "—")}</td></tr>`);
-    return `<section class="analysis-block"><header class="analysis-head">${head("Route directory")}
-      <div class="analysis-segment route-modes" role="group" aria-label="Route views">${options.map(([k,label]) =>
-        button("stage-mode", k, label, {className:"route-option",pressed:k===mode})).join("")}</div></header>
-      ${directoryRows.length ? table(["Stage","Route","Date","Terrain","Distance (km)","Stage winner"],directoryRows,"directory","Route directory") :
-        empty("No stages match this route view and stage selection.")}</section>`;
+    const headers = ["Stage","Start Location","Finish Location",sortHeading("date","Date",order),"Type",sortHeading("distance","Distance (km)",order),"Stage Winner"];
+    const headerMarkup = headers.map(h => h.startsWith?.("<th") ? h : `<th scope="col">${esc(h)}</th>`).join("");
+    return `<section class="analysis-block"><header class="analysis-head">${head("Route Directory")}
+      <div class="route-directory-controls"><details class="route-type-filter" data-route-type-filter${typeMenuOpen ? " open" : ""}><summary aria-label="Filter routes by stage type">${esc(typeLabel)}</summary>
+        <div class="route-type-menu" role="group" aria-label="Stage types"><label><input type="checkbox" data-action="stage-type" value=""${types.length ? "" : " checked"}> All Stage Types</label>
+        ${stageTypes.map(value => `<label><input type="checkbox" data-action="stage-type" value="${esc(value)}"${types.includes(value) ? " checked" : ""}> ${esc(stageTypeName(value))}</label>`).join("")}</div>
+      </details><div class="analysis-segment route-modes" role="group" aria-label="Route views">${options.map(([k,label]) =>
+        button("stage-mode", k, label, {className:"route-option",pressed:k===mode && !order?.key})).join("")}</div></div></header>
+      ${directoryRows.length ? `<div class="analysis-table-wrap route-table-scroll" data-scroll="directory" tabindex="0" role="region" aria-label="Route Directory"><table class="analysis-table" aria-label="Route Directory"><thead><tr>${headerMarkup}</tr></thead><tbody>${directoryRows.join("")}</tbody></table></div>` :
+        empty("No stages match this route view and stage types.")}</section>`;
   }
 
   function stageDetails(stage, rows, state, loading, error) {
     const intro = `<header class="analysis-head"><div><h3 class="analysis-title" data-evidence-heading tabindex="-1">Stage ${esc(stage.stage_id)} · ${esc(route(stage))}</h3>
-      ${note(`${stage.stage_date} · ${terrainName(stage.stage_type)} · ${n(stage.distance_km)} km`)}</div></header>`;
+      ${note(`${stage.stage_date} · ${stageTypeName(stage.stage_type)} · ${n(stage.distance_km)} km`)}</div></header>`;
     if (loading) return intro + '<p role="status" class="analysis-note">Loading stage results…</p>';
     if (error) return intro + empty(error) + button("retry-stage","","Retry stage results");
     if (!rows.length) return intro + empty("No stage results match the current rider and team filters.");
@@ -106,11 +131,11 @@
       ${note(`${person.team_name} · Source rank ${person.finish_rank}`)}
       <p>Finish ${clock(person.finish_time_seconds)} · Bonus ${esc(person.time_bonus_seconds)} s · Penalty ${esc(person.time_penalty_seconds)} s · Adjusted ${clock(person.adjusted_time_seconds)}</p>
       ${button("trend",person.rider_key,"Rider trend")}</div>` : "";
-    return `${intro}<div class="route-results-grid"><section><div class="analysis-head"><h4>${state.stageFull ? "All matching finishers" : "Top-ten finishers"}</h4>
-      ${button("full-stage","",state.stageFull ? "Show top ten" : `Full stage (${rows.length})`,{pressed:!!state.stageFull})}</div>
-      ${resultRows.length ? table(["Rank","Bib","Rider","Team","Finish time","Adjusted time"],resultRows,"stage-results","Stage results by source rank") : empty("No matching riders finished in the source top ten.")}
-      ${riderDetail}</section><section><h4>Top-ten places by team</h4>${bars || empty("No matching top-ten results.")}
-      ${chosenTeam ? `<div class="route-fact">${note(`${chosenTeam.name} · ${chosenTeam.count} highlighted`)}${button("team-evidence",teamKey,"Open top-ten evidence")}</div>` : ""}</section></div>`;
+    return `${intro}<div class="route-results-grid"><section><div class="analysis-head"><h4>${state.stageFull ? "All Matching Finishers" : "Top-Ten Finishers"}</h4>
+      ${button("full-stage","",state.stageFull ? "Show Top Ten" : `Full Stage (${rows.length})`,{pressed:!!state.stageFull})}</div>
+      ${resultRows.length ? table(["Rank","Bib","Rider","Team","Finish Time","Adjusted Time"],resultRows,state.stageFull ? "stage-results" : "stage-top-ten","Stage Results by source rank") : empty("No matching riders finished in the source top ten.")}
+      ${riderDetail}</section><section><h4>Top-Ten Places by Team</h4>${bars || empty("No matching top-ten results.")}
+      ${chosenTeam ? `<div class="route-fact">${note(`${chosenTeam.name} · ${chosenTeam.count} highlighted`)}${button("team-evidence",teamKey,"Open Top-Ten Evidence")}</div>` : ""}</section></div>`;
   }
 
   async function stagesPage(ctx) {
@@ -118,11 +143,20 @@
     if (!ctx.isCurrent()) return;
     const root = mount(ctx), state = ctx.preferences, cache = new Map();
     let seq = 0, loading = false, error = "";
-    let mode = ["order","longest","itt"].includes(state.stageMode) ? state.stageMode : "order";
-    if (mode === "itt" && stages.some(s => n(s.stage_id) === n(state.stageId) && s.stage_type !== "individual time-trial")) mode = "order";
+    let mode = ["order","longest"].includes(state.stageMode) ? state.stageMode : "order";
+    const validTypes = new Set(stages.map(s => s.stage_type));
+    let types = Array.isArray(state.stageTypes) ? [...new Set(state.stageTypes.filter(value => validTypes.has(value)))] :
+      (validTypes.has(state.stageType) ? [state.stageType] : []);
+    if (types.length && stages.some(s => n(s.stage_id) === n(state.stageId) && !types.includes(s.stage_type))) types = [];
+    let order = ["date","distance"].includes(state.stageSort?.key) ? state.stageSort : null;
+    let typeMenuOpen = false;
     state.stageMode = mode;
-    let list = stageList(stages,mode);
+    state.stageTypes = types;
+    state.stageType = types.length === 1 ? types[0] : "";
+    state.stageSort = order;
+    let list = stageList(stages,mode,types,order);
     let selected = list.find(s => n(s.stage_id) === n(state.stageId)) || list[0];
+    let spotlightId = mode === "longest" && selected ? n(selected.stage_id) : null;
     if (selected && n(state.stageId) !== n(selected.stage_id)) resetStage(selected);
     let rows = [];
 
@@ -133,8 +167,10 @@
       state.stageFull = false;
     }
     function draw() {
+      const currentTypeMenu = root.querySelector("[data-route-type-filter]");
+      if (currentTypeMenu) typeMenuOpen = currentTypeMenu.open;
       const details = selected ? `<section class="analysis-block">${stageDetails(selected,rows,state,loading,error)}</section>` : "";
-      paint(root, directoryMarkup(list,mode,selected ? n(selected.stage_id) : null) + details);
+      paint(root, directoryMarkup(list,mode,spotlightId,types,order,stages,typeMenuOpen) + details);
     }
     async function loadStage(moveFocus = false) {
       const request = ++seq;
@@ -168,15 +204,25 @@
       const {action,value} = b.dataset;
       if (action === "stage-mode") {
         mode = state.stageMode = value;
-        list = stageList(stages,mode);
+        order = state.stageSort = null;
+        list = stageList(stages,mode,types,order);
         selected = list[0];
+        spotlightId = mode === "longest" && selected ? n(selected.stage_id) : null;
         resetStage(selected);
         const box = root.querySelector('[data-scroll="directory"]');
         if (box) box.scrollTop = 0;
         return loadStage();
       }
+      if (action === "stage-sort") {
+        order = state.stageSort = order?.key === value ? {key:value,desc:!order.desc} : {key:value,desc:value === "distance"};
+        list = stageList(stages,mode,types,order);
+        selected = list.find(s => n(s.stage_id) === n(state.stageId)) || list[0];
+        resetStage(selected);
+        return loadStage();
+      }
       if (action === "choose-stage") {
         selected = list.find(s => n(s.stage_id) === n(value));
+        spotlightId = selected ? n(selected.stage_id) : null;
         resetStage(selected);
         return loadStage(true);
       }
@@ -192,6 +238,20 @@
       if (action === "stage-rider") state.stageRiderKey = n(state.stageRiderKey) === n(value) ? null : n(value);
       draw();
       if (action === "stage-rider" && state.stageRiderKey) root.querySelector("[data-rider-heading]")?.focus();
+    };
+    root.onchange = event => {
+      const checkbox = event.target.closest('input[data-action="stage-type"]');
+      if (!checkbox || !ctx.isCurrent()) return;
+      typeMenuOpen = checkbox.closest("details")?.open ?? true;
+      if (!checkbox.value && checkbox.checked) types = [];
+      else if (checkbox.value) types = checkbox.checked ? [...new Set([...types,checkbox.value])] : types.filter(value => value !== checkbox.value);
+      state.stageTypes = types;
+      state.stageType = types.length === 1 ? types[0] : "";
+      list = stageList(stages,mode,types,order);
+      selected = list[0];
+      spotlightId = mode === "longest" && selected ? n(selected.stage_id) : null;
+      resetStage(selected);
+      return loadStage();
     };
     await loadStage();
   }

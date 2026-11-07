@@ -30,7 +30,7 @@
           <select id="filter-stage-scope" name="stage_scope" class="control-select">
             <option value="final" selected>Full race · Stages 1–21</option>
             <option value="as_of">Through a stage · 1–S</option>
-            <option value="selection">Selected stages / terrain</option>
+            <option value="selection">Selected Stages / Stage Type</option>
           </select>
         </div>
 
@@ -47,8 +47,8 @@
 
         <!-- Custom Stage Selection (shown when stage_scope = selection) -->
         <div class="control-group hidden" id="group-custom-selection">
-          <span class="control-label">Stage Terrain</span>
-          <div class="chip-checkbox-grid" role="group" aria-label="Stage terrain types">
+          <span class="control-label">Stage Type</span>
+          <div class="chip-checkbox-grid" role="group" aria-label="Stage types">
             <label class="chip-check">
               <input type="checkbox" name="stage_types" value="flat" />
               <span>Flat</span>
@@ -72,7 +72,7 @@
           </label>
           <div class="stage-picker-row">
             <select id="filter-stage-dropdown" class="control-select" aria-label="Choose a stage to add to selection">
-              <option value="">All stages in selected terrain…</option>
+              <option value="">All stages in selected stage types…</option>
             </select>
             <button type="button" id="add-stage-btn" class="btn-secondary btn-compact">Add</button>
           </div>
@@ -175,7 +175,7 @@
     <!-- Main Content Column -->
     <main class="portal-main">
       <header class="editorial-topbar compact-topbar">
-        <div class="topbar-title-block"><h2 id="workspace-heading" class="workspace-heading">Race overview</h2></div>
+        <div class="topbar-title-block"><h2 id="workspace-heading" class="workspace-heading">Race Overview</h2></div>
         <div class="topbar-actions">
           <a id="topbar-p0-link" href="http://127.0.0.1:3000" target="_blank" rel="noopener noreferrer" class="topbar-link">Metabase ↗</a>
           <button type="button" id="open-filters-btn" class="scope-control" aria-haspopup="dialog" aria-controls="filter-drawer">
@@ -214,7 +214,7 @@
   <div class="poster-edition"><span class="poster-date">5—27 July</span><span class="poster-year">2025</span></div>
   <div class="poster-story">
     <h2 id="race-poster-title"><span>Tour de</span><strong>France</strong></h2>
-    <p class="poster-field"><span class="poster-starters"><b data-race-value="starters">—</b> starters</span><span class="poster-teams"><b data-race-value="teams">—</b> teams</span></p>
+    <p class="poster-field"><span class="poster-starters"><b data-race-value="starters">—</b> starters</span><span class="poster-teams"><b data-race-value="teams">—</b> teams</span><span class="poster-countries"><b data-race-value="countries">—</b> countries</span></p>
   </div>
   <div class="poster-bottom" aria-label="Full race context">
     <button type="button" id="poster-stage-link" class="poster-stages" aria-label="Open the stage directory">
@@ -228,16 +228,24 @@
   </div>
   <a class="photo-credit" href="https://commons.wikimedia.org/wiki/File:Peloton_during_Simacourbe_climb_of_Tour_de_France_2024_stage_13.jpg" target="_blank" rel="noopener noreferrer">Tour 2024 · Hugo LUC · CC BY-SA 4.0</a>
 </section>
-<article class="card podium-summary"><div class="analysis-head"><h3>Final general classification</h3><button type="button" data-open-module="rider_standings" data-final-standings="true" class="analysis-link">Full standings →</button></div><div id="overview-standings-container" aria-live="polite"></div></article>
-<article class="card stage-trend-card"><div class="analysis-head"><h3>Stage finishers</h3><button type="button" data-open-module="stage_summary" class="analysis-link">Stage directory →</button></div><p class="analysis-note trend-unit">All riders · active stage scope</p><div id="stage-trend-chart" class="stage-trend-chart" aria-live="polite"></div></article>
-<div class="explore-shortcuts"><h3>Explore</h3><button data-open-module="rider_specialisation">Terrain fit <span>↗</span></button><button data-open-module="gc_evolution">Decisive stages <span>↗</span></button><button data-open-module="time_rules">Time rules <span>↗</span></button></div>
+<article class="card podium-summary overview-awards-block">
+  <section class="overview-award-section"><div class="analysis-head"><h3>Final General Classification Winners</h3><button type="button" data-open-module="rider_standings" data-final-standings="true" class="analysis-link">Full Standings →</button></div><div id="overview-standings-container" aria-live="polite"></div></section>
+  <section class="overview-award-section"><div class="analysis-head"><h3>Best Team Award</h3><button type="button" data-open-module="team_standings" class="analysis-link">Full Standings →</button></div><div id="overview-team-award-container" aria-live="polite"></div></section>
+</article>
+<div class="overview-analytics-grid">
+  <article class="card overview-mini-card"><div class="analysis-head"><h3>Stage Type Composition</h3></div><p class="analysis-note trend-unit">Active stage scope</p><div id="stage-type-donut" aria-live="polite"></div></article>
+  <article class="card overview-mini-card"><div class="analysis-head"><h3>Top Riders</h3></div><p class="analysis-note trend-unit">Final GC · adjusted time</p><div id="top-riders-chart" aria-live="polite"></div></article>
+  <article class="card overview-mini-card"><div class="analysis-head"><h3>Top Teams</h3></div><p class="analysis-note trend-unit">Per-stage top three · adjusted time</p><div id="top-teams-chart" aria-live="polite"></div></article>
+</div>
+<article class="card stage-trend-card"><div class="analysis-head"><h3>Stage Finisher Trend</h3><button type="button" data-open-module="stage_summary" class="analysis-link">Stage Directory →</button></div><p class="analysis-note trend-unit">All riders · active stage scope</p><div id="stage-trend-chart" class="stage-trend-chart" aria-live="polite"></div></article>
+<div class="explore-shortcuts"><h3>Explore</h3><button data-open-module="rider_specialisation">Stage Type Fit <span>↗</span></button><button data-open-module="gc_evolution">Decisive Stages <span>↗</span></button><button data-open-module="time_rules">Time Rules <span>↗</span></button></div>
 <details id="bi-disclosure" class="bi-disclosure"><summary>Metabase dashboard</summary>
 <!-- Embedded Metabase Dashboard Card -->
             <article class="card embed-card">
               <div class="card-header embed-card-header">
                 <div>
 
-                  <h3 class="card-title" id="bi-workspace-title" tabindex="-1">Race dashboard</h3>
+                  <h3 class="card-title" id="bi-workspace-title" tabindex="-1">Race Dashboard</h3>
                 </div>
                 <div class="embed-header-controls"><button type="button" id="back-to-table-btn" class="btn-secondary btn-compact hidden">← Back to table</button>
                   <button type="button" id="refresh-embed-btn" class="btn-secondary btn-compact">
@@ -310,12 +318,12 @@
           <!-- VIEW 2: EXPLORE MODULES -->
           <section id="view-explore" class="view-section hidden" aria-label="Interactive Analytical Explorer">
             <div class="card explorer-card">
-<nav id="research-tabs" class="analysis-tabs" aria-label="Exploratory topics" hidden><button data-open-module="rider_specialisation">Terrain fit</button><button data-open-module="gc_evolution">Decisive stages</button><button data-open-module="time_rules">Time rules</button></nav>
+<nav id="research-tabs" class="analysis-tabs" aria-label="Exploratory topics" hidden><button data-open-module="rider_specialisation">Stage Type Fit</button><button data-open-module="gc_evolution">Decisive Stages</button><button data-open-module="time_rules">Time Rules</button></nav>
 <div id="analysis-host" class="analysis-page" hidden></div>
               <!-- Module Sub-Toolbar -->
               <div class="module-subtoolbar" id="explore-subtoolbar">
                 <div class="module-meta">
-                  <h3 id="explore-module-title" class="module-heading">Classification comparison</h3>
+                  <h3 id="explore-module-title" class="module-heading">Classification Comparison</h3>
                   <p id="explore-module-desc">
                     Compare time and proxy rankings under the same race scope.
                   </p>
@@ -343,10 +351,10 @@
           <!-- VIEW 3: METHODS, COURSE CONCEPTS & METRIC DEFINITIONS -->
           <section id="view-methods" class="view-section hidden" aria-label="Course Concepts and Metric Definitions">
 <div class="methods-grid concise-methods">
-  <article class="card method-card"><h3 class="card-title">Scope &amp; eligibility</h3><dl class="definition-list"><dt>Final race</dt><dd>Final GC/time standings require completing all 21 stages. Stage-based analyses retain completed results from exited riders.</dd><dt>Through stage S</dt><dd>Cumulative stages 1–S; riders must complete every stage up to that point.</dd><dt>Selected stages</dt><dd>Performance over your selected stages and terrain, rather than full-race GC.</dd><dt>Ranking cohort</dt><dd>Overall keeps the full eligible ranking; filtered reranks the selected riders.</dd></dl></article>
-  <article class="card method-card"><h3 class="card-title">Time &amp; rankings</h3><dl class="definition-list"><dt>Adjusted time</dt><dd>Finish time − time bonus + time penalty. Times are shown as hours:minutes:seconds.</dd><dt>Young Rider</dt><dd>Riders born on or after 1 January 2000.</dd><dt>Per-stage top 3</dt><dd>Sum each team's three fastest riders on every stage; contributors can change.</dd><dt>Cumulative top 3</dt><dd>Sum the three fastest riders who completed every stage in the selected scope.</dd><dt>Points Proxy / KOM Proxy</dt><dd>Stage-finish and terrain-based scores, <strong>never official</strong> sprint or mountain classifications. Tied scores share a rank.</dd></dl></article>
-  <article class="card method-card"><h3 class="card-title">Participation &amp; samples</h3><dl class="definition-list"><dt>Country participation</dt><dd>Rider nationality and team registration are different roles. Country summaries cover the whole race; nationality counts exclude unknown nationality.</dd><dt>Stage finishers</dt><dd>All riders who finished each selected stage; rider and team filters do not narrow this count.</dd><dt>Percentile &amp; sample size</dt><dd>Higher is better; compare the number of completed stages alongside each average.</dd><dt>Native terrain Pivot</dt><dd>Full-race view. Use the adjacent Cross-Tab or Explore table for filtered comparisons.</dd><dt>Retired riders</dt><dd>Keep their completed stages and team contributions; incomplete totals are not final GC.</dd></dl></article>
-  <article class="card method-card"><h3 class="card-title">OLAP operations</h3><dl class="definition-list"><dt>Slice &amp; dice</dt><dd>Combine terrain, stages, teams, riders and age eligibility in Filters.</dd><dt>Roll-up</dt><dd>Compare stage results at rider, team, terrain or race-week level.</dd><dt>Drill-down</dt><dd>Follow a team to its riders and individual stage results, or open a stage or country's members.</dd><dt>Pivot</dt><dd>Compare riders across four terrain types in the Metabase matrix.</dd></dl><p class="method-note">Race participation and stage results use separate counting levels, so riders and route distances are not multiplied by the number of results.</p></article>
+  <article class="card method-card"><h3 class="card-title">Scope &amp; Eligibility</h3><dl class="definition-list"><dt>Final race</dt><dd>Final GC/time standings require completing all 21 stages. Stage-based analyses retain completed results from exited riders.</dd><dt>Through stage S</dt><dd>Cumulative stages 1–S; riders must complete every stage up to that point.</dd><dt>Selected stages</dt><dd>Performance over your selected stages and stage types, rather than full-race GC.</dd><dt>Ranking cohort</dt><dd>Overall keeps the full eligible ranking; filtered reranks the selected riders.</dd></dl></article>
+  <article class="card method-card"><h3 class="card-title">Time &amp; Rankings</h3><dl class="definition-list"><dt>Adjusted time</dt><dd>Finish time − time bonus + time penalty. Times are shown as hours:minutes:seconds.</dd><dt>Young Rider</dt><dd>Riders born on or after 1 January 2000.</dd><dt>Per-stage top 3</dt><dd>Sum each team's three fastest riders on every stage; contributors can change.</dd><dt>Cumulative top 3</dt><dd>Sum the three fastest riders who completed every stage in the selected scope.</dd><dt>Points Proxy / KOM Proxy</dt><dd>Stage-finish and stage-type-based scores, <strong>never official</strong> sprint or mountain classifications. Tied scores share a rank.</dd></dl></article>
+  <article class="card method-card"><h3 class="card-title">Participation &amp; Samples</h3><dl class="definition-list"><dt>Country participation</dt><dd>Rider nationality and team registration are different roles. Country summaries cover the whole race; nationality counts exclude unknown nationality.</dd><dt>Stage finishers</dt><dd>All riders who finished each selected stage; rider and team filters do not narrow this count.</dd><dt>Percentile &amp; sample size</dt><dd>Higher is better; compare the number of completed stages alongside each average.</dd><dt>Native Stage Type Pivot</dt><dd>Full-race view. Use the adjacent Cross-Tab or Explore table for filtered comparisons.</dd><dt>Retired riders</dt><dd>Keep their completed stages and team contributions; incomplete totals are not final GC.</dd></dl></article>
+  <article class="card method-card"><h3 class="card-title">OLAP Operations</h3><dl class="definition-list"><dt>Slice &amp; dice</dt><dd>Combine stage types, stages, teams, riders and age eligibility in Filters.</dd><dt>Roll-up</dt><dd>Compare stage results at rider, team, stage-type or race-week level.</dd><dt>Drill-down</dt><dd>Follow a team to its riders and individual stage results, or open a stage or country's members.</dd><dt>Pivot</dt><dd>Compare riders across four stage types in the Metabase matrix.</dd></dl><p class="method-note">Race participation and stage results use separate counting levels, so riders and route distances are not multiplied by the number of results.</p></article>
 </div>
 <!-- Implementation reference retained for maintainers; detailed architecture also lives in docs/star-schema.md and docs/portal.md.
             <div class="methods-grid">
@@ -445,7 +453,7 @@
                   <li><strong>Slice &amp; Dice:</strong> Single-dimension (e.g., <code>stage_types = ['mountain']</code>) and multi-dimension subcube filtering via bound <code>psycopg.types.json.Jsonb</code> parameters to <code>dw.rider_standings</code>, <code>dw.team_standings</code>, <code>dw.rider_stage_results</code>, <code>dw.stage_summary</code>, <code>dw.country_participation</code>, <code>dw.rider_specialisation</code>, <code>dw.team_depth</code>, and <code>dw.gc_evolution</code>.</li>
                   <li><strong>Roll-up:</strong> Stage grain → Race Week / Stage Type / Team totals, including explicit SQL <code>GROUP BY ROLLUP</code> in <code>dw.olap_rollup</code>.</li>
                   <li><strong>Drill-down:</strong> 3-level hierarchy in the expandable inspector: <em>Team Standings → Full Team Roster (including exits) → Individual Rider Stage-by-Stage Results</em>.</li>
-                  <li><strong>Pivot:</strong> Terrain specialisation matrix across <code>flat</code>, <code>hilly</code>, <code>mountain</code>, and <code>individual time-trial</code> via <code>dw.rider_specialisation</code>.</li>
+                  <li><strong>Pivot:</strong> Stage Type specialisation matrix across <code>flat</code>, <code>hilly</code>, <code>mountain</code>, and <code>individual time-trial</code> via <code>dw.rider_specialisation</code>.</li>
                   <li><strong>Server-Signed Embedding:</strong> Metabase dashboard iframe URLs are signed server-side using <code>HS256</code> JWTs with a 10-minute expiry (<code>exp = iat + 600</code>) and automatically refreshed before expiration.</li>
                 </ul>
               </article>
@@ -490,7 +498,7 @@
               <div class="drill-step-header">
                 <span class="step-num">2</span>
                 <div>
-                  <h4 class="drill-step-title" id="drill-roster-heading" tabindex="-1">Team roster</h4>
+                  <h4 class="drill-step-title" id="drill-roster-heading" tabindex="-1">Team Roster</h4>
                   <small class="drill-step-note">
                     Includes exited riders. Available-stage time is <strong>not a final GC total</strong>.
                   </small>

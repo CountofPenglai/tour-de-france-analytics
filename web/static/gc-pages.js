@@ -127,7 +127,7 @@
     });
   }
   function factTable(rows, options = {}) {
-    return table(['Stage','Date','Terrain','Finish','Raw time','Bonus','Penalty','Adjusted time'], rows.map(r =>
+    return table(['Stage','Date','Stage Type','Finish','Raw Time','Bonus','Penalty','Adjusted Time'], rows.map(r =>
       tr([action(`S${r.stage_id}`,'fact',r.stage_id), esc(r.stage_date), esc(r.stage_type),
         esc(position(r.finish_rank)), clockTime(r.finish_time_seconds), `${r.time_bonus_seconds} s`,
         `${r.time_penalty_seconds} s`, clockTime(r.adjusted_time_seconds)], r.stage_id === options.selected)));
@@ -220,7 +220,7 @@
           (proxy.length > 10 ? action(p.proxyAll ? 'Show first 10' : `Show all ${proxy.length} riders`,'proxyAll') : '');
         extra += proxyMethod(p.proxy);
       }
-      panels += block('Points classifications',`<div class="analysis-toolbar">${proxyControls}</div>${extra}`);
+      panels += block('Points Classifications',`<div class="analysis-toolbar">${proxyControls}</div>${extra}`);
       // Keep the editing node mounted for native caret, focus and IME handling.
       const root = ctx.element;
       const resultsNode = root.querySelector('[data-gc-rank-results]');
@@ -230,7 +230,7 @@
         panelsNode.innerHTML = panels;
         return;
       }
-      ui.render(block('Compare classifications',filters + `<div data-gc-rank-results>${rankResults}</div>`,
+      ui.render(block('Compare Classifications',filters + `<div data-gc-rank-results>${rankResults}</div>`,
         `${scopeLabel(f)} · ${poolLabel(f)} · ${basisLabel(f)}`) + `<div class="gc-panels" data-gc-panels>${panels}</div>`);
     }
     function trajectoryBlock() {
@@ -406,7 +406,7 @@
       const annotations = marks.length ? `<div class="gc-inline">Rank swaps ${days.filter(d=>relevantSwaps(d).length)
         .map(d=>action(`S${d.stage.stage_id} (${relevantSwaps(d).length})`,'stage',d.stage.stage_id,d===active)).join('')}</div>` :
         note(p.allSwaps ? 'No rank swaps among these riders.' : 'No rank swaps involving the focus rider.');
-      let html = block('How did the GC race unfold?',controls + legend +
+      let html = block('How Did the GC Race Unfold?',controls + legend +
         chart(series,stages,field,active.stage.stage_id,{daily:days,marks}) + annotations +
         method('Time, gaps and daily separation',note(`Cumulative ${basisLabel(f)} runs from the start through each day. Gaps and ranks use the ${reference.toLowerCase()} leader. A swap requires a reversal from the preceding race day. Triangles mark swap days.`) +
           note('Separation is the largest minus the smallest daily change in GC gap. Day one starts from zero. A dash means that fewer than two riders were plotted or the group lacked a result.')),
@@ -516,7 +516,7 @@
         <label class="gc-check"><input id="gc-penalty-on" type="checkbox" ${p.penalties !== false ? 'checked' : ''}>Include penalties</label>
         <strong>${esc(scenarioNames[mode])} · ${scenarioFormula[mode]}</strong></div>`;
       const seconds = v => v == null ? '—' : `${v} s`;
-      let html = block('How do bonuses and penalties affect GC?',controls + kpis([
+      let html = block('How Do Bonuses and Penalties Affect GC?',controls + kpis([
         ['Standard winning margin',seconds(baseline?.winning_margin)],
         [mode === 'standard' ? 'Raw-time winning margin' : 'Scenario winning margin',seconds(mode === 'standard' ? raw?.winning_margin : rows[0]?.winning_margin)],
         ...(comparing ? [['Top-ten entries / exits',`${entering.length} / ${leaving.length}`]] : [])

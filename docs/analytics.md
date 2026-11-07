@@ -29,7 +29,7 @@ p_filters jsonb DEFAULT '{}'::jsonb
 | `stage_scope` | `string` | `'final'`, `'as_of'`, `'selection'` | `'final'` | `'final'`: all 21 stages (`1..21`).<br>`'as_of'`: cumulative stages `1..as_of_stage`.<br>`'selection'`: custom subset filtered by `stage_ids` and/or `stage_types`. |
 | `as_of_stage` | `number` (int) | `1..21` | `21` | Stage cutoff $S$ when `stage_scope = 'as_of'`. |
 | `stage_ids` | `array` of int | Stage numbers in `1..21` | All stages (`NULL`) | Explicit stage filter. Ignored by `final`/`as_of` in cumulative standings (`rider_standings`, `team_standings`, `gc_evolution`); always applied in stage-detail, summary, depth, and specialisation functions. |
-| `stage_types` | `array` of string | `'flat'`, `'hilly'`, `'mountain'`, `'individual time-trial'` | All stage types (`NULL`) | Terrain filter. Ignored by `final`/`as_of` in cumulative standings; always applied in stage-detail, summary, depth, and specialisation functions. |
+| `stage_types` | `array` of string | `'flat'`, `'hilly'`, `'mountain'`, `'individual time-trial'` | All stage types (`NULL`) | Stage Type filter. Ignored by `final`/`as_of` in cumulative standings; always applied in stage-detail, summary, depth, and specialisation functions. |
 | `time_basis` | `string` | `'finish'`, `'adjusted'` | `'adjusted'` | `'adjusted'`: `finish_time_seconds - time_bonus_seconds + time_penalty_seconds`.<br>`'finish'`: raw `finish_time_seconds`. |
 | `rank_scope` | `string` | `'overall'`, `'filtered'` | `'overall'` | `'overall'`: compute `rank`, `gap_seconds`, and `rank_percentile` across the full eligible competition universe before applying display filters (`team_keys`, `rider_keys`, `young_only`).<br>`'filtered'`: filter the cohort first, then rank within the filtered subset. |
 | `team_keys` | `array` of int | `dw.dim_team.team_key` values | All teams (`NULL`) | Restricts output (and ranking pool when `rank_scope = 'filtered'`) to matching teams. |
@@ -234,7 +234,7 @@ Compares the role-playing country dimension (`dw.dim_country`) across **rider na
 
 ### 3.6 `dw.rider_specialisation(p_filters jsonb DEFAULT '{}'::jsonb)`
 
-Aggregates rider performance by `stage_type` to evaluate terrain specialisation (Pivot analysis). Global stage rank percentiles and stage winner gaps are computed per stage prior to filtering.
+Aggregates rider performance by `stage_type` to evaluate Stage Type specialisation (Pivot analysis). Global stage rank percentiles and stage winner gaps are computed per stage prior to filtering.
 
 #### Returned Columns
 
@@ -247,11 +247,11 @@ Aggregates rider performance by `stage_type` to evaluate terrain specialisation 
 | `team_name` | `text` | Team name. |
 | `is_young_rider` | `boolean` | Young rider flag. |
 | `stage_type` | `text` | `'flat'`, `'hilly'`, `'mountain'`, or `'individual time-trial'`. |
-| `avg_rank_percentile` | `numeric(5,2)` | Mean stage `rank_percentile` (`0..100`) on this terrain. |
+| `avg_rank_percentile` | `numeric(5,2)` | Mean stage `rank_percentile` (`0..100`) for this stage type. |
 | `top10_ratio` | `numeric(6,4)` | Ratio of top-10 stage finishes to `sample_count` (`0.0000..1.0000`). |
-| `top10_count` | `integer` | Count of top-10 stage finishes (`finish_rank <= 10`) on this terrain. |
-| `win_count` | `integer` | Count of stage wins (`finish_rank = 1`) on this terrain. |
-| `mean_gap_seconds` | `numeric(10,2)` | Average stage time gap in seconds to the stage winner on this terrain (respects `time_basis`). |
+| `top10_count` | `integer` | Count of top-10 stage finishes (`finish_rank <= 10`) for this stage type. |
+| `win_count` | `integer` | Count of stage wins (`finish_rank = 1`) for this stage type. |
+| `mean_gap_seconds` | `numeric(10,2)` | Average stage time gap in seconds to the stage winner for this stage type (respects `time_basis`). |
 | `sample_count` | `integer` | Number of stages of this `stage_type` completed by the rider. |
 
 ---
@@ -296,7 +296,7 @@ Tracks stage-by-stage cumulative GC progression (Worm Chart / Decisive Stages an
 | `stage_order` | `integer` | Chronological stage order (`1..21`). |
 | `stage_date` | `date` | Stage calendar date. |
 | `race_week` | `integer` | Race week (`1..3`). |
-| `stage_type` | `text` | Stage terrain type. |
+| `stage_type` | `text` | Stage Type (`flat`, `hilly`, `mountain`, or `individual time-trial`). This is not a terrain-only field: Stages 5 and 13 are Individual Time Trials. |
 | `rider_key` | `integer` | Surrogate key from `dw.dim_rider`. |
 | `bib_number` | `integer` | Official rider bib number. |
 | `rider_name` | `text` | Rider full name. |

@@ -386,7 +386,7 @@ FUNCTION_UNITS: dict[str, dict[str, str]] = {
         "adjusted_time_seconds": "seconds (finish_time_seconds - time_bonus_seconds + time_penalty_seconds)",
         "gap_seconds": "raw seconds relative to the recorded stage winner",
         "adjusted_gap_seconds": "adjusted seconds relative to the recorded stage winner",
-        "stage_points_proxy": "proxy points 0..50 (derived from stage finish rank & terrain)",
+        "stage_points_proxy": "proxy points 0..50 (derived from stage finish rank & stage type)",
         "kom_points_proxy": "proxy points 0..20 (derived from mountain/hilly finish rank)",
         "rank_percentile": "percentage 0.00..100.00 across all finishers of the stage",
     },
@@ -403,12 +403,12 @@ FUNCTION_UNITS: dict[str, dict[str, str]] = {
         "finisher_rate": "ratio 0.0000..1.0000 (finisher_count / rider_count; NULL when rider_count = 0)",
     },
     "rider_specialisation": {
-        "avg_rank_percentile": "percentage 0.00..100.00 (mean global stage rank percentile on terrain)",
+        "avg_rank_percentile": "percentage 0.00..100.00 (mean global stage rank percentile by stage type)",
         "top10_ratio": "ratio 0.0000..1.0000 (top10_count / sample_count)",
-        "top10_count": "stages finished in top 10 on terrain (count)",
-        "win_count": "stage wins on terrain (count)",
-        "mean_gap_seconds": "seconds (mean stage time gap to stage winner on terrain)",
-        "sample_count": "completed stages on terrain (count)",
+        "top10_count": "stages finished in top 10 by stage type (count)",
+        "win_count": "stage wins by stage type (count)",
+        "mean_gap_seconds": "seconds (mean stage time gap to stage winner by stage type)",
+        "sample_count": "completed stages by stage type (count)",
     },
     "team_depth": {
         "wins": "stage wins (finish_rank = 1 count)",
@@ -466,7 +466,7 @@ DEFAULT_P0_TABS: list[dict[str, Any]] = [
         "label": "Tab 1: Executive & Race Overview",
         "short_label": "1 · Executive & Race Overview",
         "tab_id": None,
-        "description": "Race overview, participation & finisher scale, stage route and terrain distribution.",
+        "description": "Race overview, participation & finisher scale, stage route and stage type distribution.",
     },
     {
         "key": "tab_2_classifications",
@@ -498,7 +498,7 @@ DEFAULT_P0_TABS: list[dict[str, Any]] = [
         "label": "Tab 5: Deep-Dive Insights",
         "short_label": "5 · Deep-Dive Insights",
         "tab_id": None,
-        "description": "Rider terrain specialisation pivot, decisive stage GC gap evolution, and team depth.",
+        "description": "Rider stage type specialisation pivot, decisive stage GC gap evolution, and team depth.",
     },
 ]
 

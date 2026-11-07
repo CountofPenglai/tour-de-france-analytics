@@ -428,7 +428,7 @@ class DashboardProvisionerTest(unittest.TestCase):
         """Verify shortened card titles, single-unit chart axes, and human-friendly selector definitions."""
         expected_titles = {
             "overview_kpi_summary": "Race at a Glance",
-            "overview_terrain_distance_bar": "Distance by Stage Terrain",
+            "overview_terrain_distance_bar": "Distance by Stage Type",
             "overview_stage_finisher_trend_line": "Stage Finisher Trend",
             "overview_stage_summary_table": "Stage Routes",
             "overview_stage_rider_results_table": "Stage Rider Results",
@@ -439,8 +439,8 @@ class DashboardProvisionerTest(unittest.TestCase):
             "perf_team_stage_top3_table": "Team Standings · Per-stage Top 3",
             "perf_team_cumulative_top3_table": "Team Standings · Cumulative Top 3",
             "perf_rider_stage_detail_table": "Rider Stage Results",
-            "insight_rider_specialisation_crosstab_table": "Rider Terrain Specialisation · Cross-Tab",
-            "insight_rider_specialisation_pivot": "Rider Terrain Specialisation · Pivot (Full Race)",
+            "insight_rider_specialisation_crosstab_table": "Rider Stage Type Specialisation · Cross-Tab",
+            "insight_rider_specialisation_pivot": "Rider Stage Type Specialisation · Pivot (Full Race)",
         }
         by_slug = {s.slug: s for s in pd.CARD_SPECS}
         for slug, title in expected_titles.items():

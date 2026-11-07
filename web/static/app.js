@@ -112,13 +112,13 @@
   // Country member detail is a distinct union of nationality and team registration.
   const MODULE_DESCRIPTIONS = {
     rider_standings: {title: "Classifications", desc: ""},
-    team_standings: {title: "Riders & teams", desc: ""},
-    stage_summary: {title: "Stages & routes", desc: ""},
-    country_participation: {title: "Country participation", desc: "Whole-race participation · unknown nationality excluded."},
-    rider_specialisation: {title: "Terrain fit", desc: ""},
-    gc_evolution: {title: "Decisive stages", desc: ""},
-    time_rules: {title: "Time rules", desc: ""},
-    team_depth: {title: "Build a balanced squad", desc: ""}
+    team_standings: {title: "Riders & Teams", desc: ""},
+    stage_summary: {title: "Stages & Routes", desc: ""},
+    country_participation: {title: "Country Participation", desc: "Whole-race participation · unknown nationality excluded."},
+    rider_specialisation: {title: "Stage Type Fit", desc: ""},
+    gc_evolution: {title: "Decisive Stages", desc: ""},
+    time_rules: {title: "Time Rules", desc: ""},
+    team_depth: {title: "Build a Balanced Squad", desc: ""}
   };
 
   /* --------------------------------------------------------------------------
@@ -454,7 +454,7 @@
         filters.stage_ids && filters.stage_ids.length
           ? `Stages [${filters.stage_ids.join(", ")}]`
           : filters.stage_types && filters.stage_types.length
-          ? `Terrains [${filters.stage_types.join(", ")}]`
+          ? `Stage Types [${filters.stage_types.join(", ")}]`
           : "Selected Subset";
       return {
         mode: "selection",
@@ -1204,7 +1204,7 @@
           <tr>
             <th>Stage</th>
             <th>Date · Wk</th>
-            <th>Terrain</th>
+            <th>Stage Type</th>
             <th>Route (Start → Finish)</th>
             <th class="num-col">Distance</th>
             <th class="num-col">Stage Finishers</th>
@@ -1406,7 +1406,7 @@
         </div>
         <div class="drill-detail-metrics">
           <span><strong>Stage:</strong> Stage ${escapeHtml(stageId)} (${escapeHtml(stageDate)} · Week ${escapeHtml(raceWeek)})</span>
-          <span><strong>Terrain:</strong> ${terrainChip(stageType)}</span>
+          <span><strong>Stage Type:</strong> ${terrainChip(stageType)}</span>
           <span><strong>Distance:</strong> <code>${formatKm(distanceKm)}</code></span>
           <span><strong>Displayed / Stage Finishers:</strong> <strong>${rows.length}</strong> / ${escapeHtml(globalFinisherCount)} rows</span>
           <span><strong>Time Basis:</strong> ${escapeHtml(basisLabel)}</span>
@@ -1897,8 +1897,8 @@
       renderStateBox(
         container,
         "empty",
-        "No Terrain Specialisation Rows",
-        "Adjust rider, team, or terrain filters."
+        "No Stage Type Specialisation Rows",
+        "Adjust rider, team, or stage type filters."
       );
       return;
     }
@@ -1922,7 +1922,7 @@
           </div>
           <div class="pagination-controls">
             <label for="spec-page-size-${escapeHtml(positionSuffix)}" class="control-label-inline">Rows/page:</label>
-            <select id="spec-page-size-${escapeHtml(positionSuffix)}" class="pagination-select" data-spec-page-size aria-label="Terrain specialisation rows per page">
+            <select id="spec-page-size-${escapeHtml(positionSuffix)}" class="pagination-select" data-spec-page-size aria-label="Stage type specialisation rows per page">
               <option value="50" ${state.specialisationPageSize === 50 ? "selected" : ""}>50</option>
               <option value="100" ${state.specialisationPageSize === 100 ? "selected" : ""}>100</option>
               <option value="250" ${state.specialisationPageSize === 250 ? "selected" : ""}>250</option>
@@ -1957,7 +1957,7 @@
           <tr>
             <th>Bib · Rider</th>
             <th>Team</th>
-            <th>Terrain Type</th>
+            <th>Stage Type</th>
             <th class="num-col">Stages (Sample)</th>
             <th class="num-col">Avg Rank Percentile</th>
             <th class="num-col">Top-10 Finishes</th>
@@ -2052,7 +2052,7 @@
         <thead>
           <tr>
             <th>Stage</th>
-            <th>Terrain</th>
+            <th>Stage Type</th>
             <th>Bib · Rider</th>
             <th>Team</th>
             <th class="num-col">GC Rank (At S)</th>
@@ -2169,30 +2169,50 @@
      Overview & Explorer Data Loaders
      -------------------------------------------------------------------------- */
 
-  let finalGCLeaders;
+  let finalGCLeaders, finalTeamLeaders;
+  function renderOverviewAward(container, rows, kind) {
+    if (!container) return;
+    if (!rows.length) return renderStateBox(container, "warning", "Standings unavailable", "");
+    const entityKey = kind === "team" ? "team_key" : "rider_key";
+    const entityName = kind === "team" ? "team_name" : "rider_name";
+    const podium = rows.slice(0,3);
+    const displayRows = podium.length === 3 ? [podium[1],podium[0],podium[2]] : podium;
+    container.innerHTML = '<div class="finish-pair">' + displayRows.map(row =>
+      '<button class="finish-rider' + (Number(row.rank) === 1 ? ' podium-winner' : '') + '" type="button" data-award-kind="' + kind + '" data-award-key="' + Number(row[entityKey]) + '"><small><span class="award-medal" aria-hidden="true">🏅</span>' + (kind === "team" ? "Team " : "GC ") + Number(row.rank) +
+      '</small><strong>' + escapeHtml(row[entityName]) + '</strong><span>' + (kind === "team" ? Number(row.contributor_count) + ' contributors' : escapeHtml(row.team_name)) +
+      '</span></button>'
+    ).join("") + '</div>';
+    container.querySelectorAll("[data-award-key]").forEach(button => button.onclick = () =>
+      goToAnalysis(kind === "team" ? "team_standings" : "rider_standings", kind === "team" ?
+        {teamKey:Number(button.dataset.awardKey)} : {riderKey:Number(button.dataset.awardKey), finalGC:true}));
+  }
   async function refreshOverviewCards() {
     const reqId = ++state.requestSeq.overview;
     const gcContainer = document.getElementById("overview-standings-container");
+    const teamContainer = document.getElementById("overview-team-award-container");
+    const donut = document.getElementById("stage-type-donut");
+    const topRiders = document.getElementById("top-riders-chart");
+    const topTeams = document.getElementById("top-teams-chart");
     const trend = document.getElementById("stage-trend-chart");
     updateScopeBanner();
     finalGCLeaders ??= apiPost("/api/analytics/rider_standings", {stage_scope:"final", classification:"gc", time_basis:"adjusted"})
-      .then(data => data.rows.slice(0, 2))
+      .then(data => data.rows.slice(0, 5))
       .catch(error => { finalGCLeaders = undefined; throw error; });
+    finalTeamLeaders ??= apiPost("/api/analytics/team_standings", {stage_scope:"final", time_basis:"adjusted", rank_scope:"overall", team_aggregation:"stage_top3"})
+      .then(data => data.rows.slice(0, 5))
+      .catch(error => { finalTeamLeaders = undefined; throw error; });
     const stages = apiPost("/api/analytics/stage_summary", buildStageScopeOnlyFilters());
-    const [leaders, stageData] = await Promise.allSettled([finalGCLeaders, stages]);
+    const [leaders, teams, stageData] = await Promise.allSettled([finalGCLeaders, finalTeamLeaders, stages]);
     if (reqId !== state.requestSeq.overview) return;
-    if (gcContainer) {
-      const rows = leaders.status === "fulfilled" ? leaders.value : [];
-      if (rows.length) {
-        gcContainer.innerHTML = '<div class="finish-pair">' + rows.map(row =>
-          '<button class="finish-rider" type="button" data-final-rider="' + Number(row.rider_key) + '"><small>GC ' + Number(row.rank) +
-          '</small><strong>' + escapeHtml(row.rider_name) + '</strong><span>' + escapeHtml(row.team_name) +
-          '</span><b>' + (row.rank === 1 ? formatDuration(row.total_seconds) : formatGap(row.gap_seconds)) + '</b></button>'
-        ).join("") + '</div>';
-        gcContainer.querySelectorAll("[data-final-rider]").forEach(button => button.onclick = () =>
-          goToAnalysis("rider_standings", {riderKey:Number(button.dataset.finalRider), finalGC:true}));
-      } else renderStateBox(gcContainer, "warning", "Standings unavailable", "");
-    }
+    const riderRows = leaders.status === "fulfilled" ? leaders.value : [];
+    const teamRows = teams.status === "fulfilled" ? teams.value : [];
+    renderOverviewAward(gcContainer, riderRows, "rider");
+    renderOverviewAward(teamContainer, teamRows, "team");
+    if (topRiders) topRiders.innerHTML = RaceAppearance.rankingBarsMarkup(riderRows,"rider");
+    if (topTeams) topTeams.innerHTML = RaceAppearance.rankingBarsMarkup(teamRows,"team");
+    topRiders?.querySelectorAll("[data-overview-rider]").forEach(button => button.onclick = () => goToAnalysis("rider_standings", {riderKey:Number(button.dataset.overviewRider),finalGC:true}));
+    topTeams?.querySelectorAll("[data-overview-team]").forEach(button => button.onclick = () => goToAnalysis("team_standings", {teamKey:Number(button.dataset.overviewTeam)}));
+    if (donut) donut.innerHTML = stageData.status === "fulfilled" ? RaceAppearance.stageTypeDonutMarkup(stageData.value.rows || []) : '<p class="analysis-empty">Stage type data unavailable.</p>';
     if (trend) trend.innerHTML = stageData.status === "fulfilled" ? RaceAppearance.stageChartMarkup(stageData.value.rows || []) : '<p class="analysis-empty">Stage results unavailable.</p>';
   }
 
@@ -2730,7 +2750,7 @@
           <thead>
             <tr>
               <th>Stage · Date</th>
-              <th>Terrain</th>
+              <th>Stage Type</th>
               <th class="num-col">Dist.</th>
               <th class="num-col">Stage Rank (Ties Permitted)</th>
               <th class="num-col">Raw Time</th>
@@ -2804,7 +2824,7 @@
       return;
     }
     if (state.selectedStageIds.length === 0) {
-      container.innerHTML = `<small class="label-hint">All stages matching checked terrain types</small>`;
+      container.innerHTML = `<small class="label-hint">All stages matching checked stage types</small>`;
       return;
     }
     container.innerHTML = state.selectedStageIds
@@ -3464,6 +3484,7 @@
     const values = {
       starters: data?.starters,
       teams: data?.teams,
+      countries: data?.countries,
       stages: data?.stages,
       distance: data?.distance,
     };

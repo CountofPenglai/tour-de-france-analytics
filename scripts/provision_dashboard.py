@@ -50,7 +50,7 @@ DEFAULT_DASHBOARD_NAME = "Tour de France 2025 OLAP Analytics"
 DEFAULT_DASHBOARD_DESCRIPTION = (
     "5-tab OLAP analytical dashboard for the 2025 Tour de France. "
     "Note: Points — Proxy and KOM — Proxy are nonofficial source-derived indices "
-    "calculated transparently from stage terrain and stage finishing positions."
+    "calculated transparently from stage type and stage finishing positions."
 )
 DEFAULT_STATE_PATH = Path("build/metabase-state.json")
 
@@ -108,7 +108,7 @@ COLUMN_LABELS: Dict[str, str] = {
     "stage_name": "Stage Route",
     "stage_date": "Date",
     "race_week": "Race Week",
-    "stage_type": "Stage Terrain",
+    "stage_type": "Stage Type",
     "route_description": "Start -> Finish Route",
     "participation_status": "Race Status",
     "classification": "Classification",
@@ -416,7 +416,7 @@ FILTER_SPECS: Dict[str, FilterSpec] = {
         static_values=(
             ("final", "Final (All 21 Stages)"),
             ("as_of", "As-Of Stage S (Cumulative 1..S)"),
-            ("selection", "Selected Stages / Terrain Subset"),
+            ("selection", "Selected Stages / Stage Type Subset"),
         ),
     ),
     "as_of_stage": FilterSpec(
@@ -441,7 +441,7 @@ FILTER_SPECS: Dict[str, FilterSpec] = {
     "stage_types": FilterSpec(
         key="stage_types",
         param_id="param_stage_types",
-        name="Stage Terrain",
+        name="Stage Type",
         param_type="string/=",
         section_id="string",
         tag_type="text",
@@ -864,7 +864,7 @@ CAPTION_SPECS: Tuple[CaptionDashcardSpec, ...] = (
     CaptionDashcardSpec(
         slug="caption_overview_scope", tab_slug="tab_overview",
         row=0, col=0, size_x=24, size_y=2,
-        markdown_text="**Race & stages** · Compare terrain and stage patterns, then select a stage or rider to open its results.",
+        markdown_text="**Race & Stages** · Compare stage type and stage patterns, then select a stage or rider to open its results.",
     ),
     CaptionDashcardSpec(
         slug="caption_classifications_proxy_notice", tab_slug="tab_classifications",
@@ -872,7 +872,7 @@ CAPTION_SPECS: Tuple[CaptionDashcardSpec, ...] = (
         markdown_text=(
             "**Compare rankings** · Final = full-race GC; As-Of = stages 1–S; Selection = selected-stage performance. "
             "Only riders completing every stage in scope qualify; Young Rider requires birth in 2000 or later.\n\n"
-            "**Points / KOM: nonofficial source-derived proxy indices**, based on stage finishes and terrain. Tied scores share a rank."
+            "**Points / KOM: nonofficial source-derived proxy indices**, based on stage finishes and stage type. Tied scores share a rank."
         ),
     ),
 )
@@ -953,10 +953,10 @@ CROSS JOIN scoped_stages ss;""",
         ),
         CardSpec(
             slug="overview_terrain_distance_bar",
-            name="Distance by Stage Terrain",
+            name="Distance by Stage Type",
             description=(
-                "Total unique route distance (km) by stage terrain category without duplicating distance across "
-                "rider rows (stage counts and averages are listed in Stage Routes). Click a bar to open stages of that terrain in the portal."
+                "Total unique route distance (km) by stage type without duplicating distance across "
+                "rider rows (stage counts and averages are listed in Stage Routes). Click a bar to open stages of that type in the portal."
             ),
             tab_slug="tab_overview",
             display="bar",
@@ -978,7 +978,7 @@ ORDER BY total_distance_km DESC, ss.stage_type ASC;""",
             visualization_settings={
                 "graph.dimensions": ["stage_type"],
                 "graph.metrics": ["total_distance_km"],
-                "graph.x_axis.title_text": "Stage Terrain",
+                "graph.x_axis.title_text": "Stage Type",
                 "graph.y_axis.title_text": "Total Distance (km)",
             },
             click_action=ClickActionSpec(
@@ -1027,7 +1027,7 @@ ORDER BY ss.stage_order ASC;""",
             slug="overview_stage_summary_table",
             name="Stage Routes",
             description=(
-                "One row per stage showing calendar date, race week, terrain category, unique stage distance (km), "
+                "One row per stage showing calendar date, race week, stage type, unique stage distance (km), "
                 "start and finish locations, finisher count, and stage winner. Click a stage label to open its results in the portal."
             ),
             tab_slug="tab_overview",
@@ -1191,7 +1191,7 @@ ORDER BY rs.rank ASC, rs.bib_number ASC;""",
             slug="class_points_proxy_table",
             name="Points — Proxy",
             description=(
-                "Nonofficial source-derived proxy index summing stage finish points mapped from stage terrain and "
+                "Nonofficial source-derived proxy index summing stage finish points mapped from stage type and "
                 "top-15 stage finishes; ranked strictly by descending points without time tie-breakers. "
                 "Click a rider to open their stage trajectory in the portal."
             ),
@@ -1612,7 +1612,7 @@ ORDER BY sr.stage_order ASC, sr.finish_rank ASC, sr.bib_number ASC;""",
             name="Rider Stage Results",
             description=(
                 "Step 3 of Team -> Rider -> Stage drill-down: rider stage results showing official bib number, "
-                "stage route, terrain, distance (km), finish rank, raw and adjusted times and gaps (seconds), "
+                "stage route, stage type, distance (km), finish rank, raw and adjusted times and gaps (seconds), "
                 "and nonofficial proxy points. Click a stage label to open its results in the portal."
             ),
             tab_slug="tab_performance",
@@ -1920,9 +1920,9 @@ ORDER BY cp.rider_count DESC, cp.team_count DESC, cp.country_code ASC, mm.bib_nu
         # =====================================================================
         CardSpec(
             slug="insight_rider_specialisation_crosstab_table",
-            name="Rider Terrain Specialisation · Cross-Tab",
+            name="Rider Stage Type Specialisation · Cross-Tab",
             description=(
-                "Filterable four-terrain cross-tab matrix (Flat, Hilly, Mountain, Individual Time-Trial) "
+                "Filterable four-stage-type cross-tab matrix (Flat, Hilly, Mountain, Individual Time-Trial) "
                 "comparing rider mean stage percentile (%), Top-10 finish rate (%), stage wins, mean gap to "
                 "the stage winner (seconds), and stages sampled. Click a rider label to open their stage trajectory in the portal."
             ),
@@ -1977,11 +1977,11 @@ ORDER BY
         ),
         CardSpec(
             slug="insight_rider_specialisation_detail_bar",
-            name="Rider Terrain Specialisation · Breakdown",
+            name="Rider Stage Type Specialisation · Breakdown",
             description=(
-                "Grouped bar chart of mean stage rank percentile (%) by terrain category (defaults to Top 10 "
+                "Grouped bar chart of mean stage rank percentile (%) by stage type (defaults to Top 10 "
                 "GC finishers when unfiltered; Top-10 rates, wins, mean gaps, and sample counts appear in the "
-                "Cross-Tab table). Click a bar to open stages of that terrain in the portal."
+                "Cross-Tab table). Click a bar to open stages of that type in the portal."
             ),
             tab_slug="tab_insights",
             display="bar",
@@ -2203,9 +2203,9 @@ ORDER BY td.top10_distinct_riders DESC, td.top10_finishes DESC, td.team_name ASC
         ),
         CardSpec(
             slug="insight_olap_rollup_table",
-            name="Team × Terrain OLAP Roll-Up",
+            name="Team × Stage Type OLAP Roll-Up",
             description=(
-                "Hierarchical OLAP roll-up summary across Team and Stage Terrain showing detail rows, "
+                "Hierarchical OLAP roll-up summary across Team and Stage Type showing detail rows, "
                 "team subtotals, and the overall grand total."
             ),
             tab_slug="tab_insights",
@@ -2253,7 +2253,7 @@ ORDER BY
         # =====================================================================
         CardSpec(
             slug="perf_team_member_contributions",
-            name="Rider contributions to team time",
+            name="Rider Contributions to Team Time",
             description="Each entrant’s adjusted time and share of their selected team total, with top-ten places and completed rider–stage records.",
             tab_slug="tab_performance", display="table", row=7, col=0, size_x=24, size_y=7,
             filter_keys=DEPTH_FILTER_KEYS, sql_functions_used=("dw.team_roster_performance",),
@@ -2271,7 +2271,7 @@ ORDER BY m.team_burden_seconds DESC, m.team_name, m.rider_burden_seconds DESC, m
         ),
         CardSpec(
             slug="insight_terrain_speed",
-            name="Terrain speed and mountain results",
+            name="Stage Type Speed and Mountain Results",
             description="Distance divided by raw riding time, by rider or team. Mountain podium rate and mean winner gap use completed rider–stage records. Rank gain compares Mountain with combined Flat and Hilly speeds.",
             tab_slug="tab_insights", display="table", row=0, col=0, size_x=24, size_y=7,
             filter_keys=ranked_scope_keys, sql_functions_used=("dw.terrain_performance",),
@@ -2293,7 +2293,7 @@ ORDER BY t.entity_kind DESC, terrain_rank_gain DESC NULLS LAST, t.entity_name;""
         ),
         CardSpec(
             slug="insight_time_rules",
-            name="GC under four timing rules",
+            name="GC Under Four Timing Rules",
             description="Standard and scenario rank, rider gap, and winner’s margin in seconds. Each scenario re-ranks the eligible field under the same scope.",
             tab_slug="tab_insights", display="table", row=21, col=0, size_x=24, size_y=7,
             filter_keys=ranked_scope_keys, sql_functions_used=("dw.gc_time_rules",),
@@ -2314,7 +2314,7 @@ ORDER BY r.baseline_rank, r.bib_number,
             slug="insight_rider_specialisation_pivot_source",
             name="Rider Stage Percentile Source (Pivot Base)",
             description=(
-                "Unparameterized full-race source question providing stage rank percentiles by rider and terrain "
+                "Unparameterized full-race source question providing stage rank percentiles by rider and stage type "
                 "for the native Metabase Pivot table."
             ),
             tab_slug="tab_insights",
@@ -2340,11 +2340,11 @@ FROM dw.rider_stage_results();""",
         ),
         CardSpec(
             slug="insight_rider_specialisation_pivot",
-            name="Rider Terrain Specialisation · Pivot (Full Race)",
+            name="Rider Stage Type Specialisation · Pivot (Full Race)",
             description=(
                 "Supplementary native Metabase Pivot table showing full-race mean stage rank percentile (%) and "
-                "completed stage counts across all 21 stages by Rider and Stage Terrain. "
-                "Use Rider Terrain Specialisation · Cross-Tab above for filtered scope analysis."
+                "completed stage counts across all 21 stages by Rider and Stage Type. "
+                "Use Rider Stage Type Specialisation · Cross-Tab above for filtered scope analysis."
             ),
             tab_slug="tab_insights",
             display="pivot",

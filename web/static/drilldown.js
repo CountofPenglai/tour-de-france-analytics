@@ -4,14 +4,14 @@
 (function(root){
   'use strict';
   const escape = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const terrainLabel = value => ({flat:'Flat',hilly:'Hilly',mountain:'Mountain','individual time-trial':'Time trial'}[value] || value);
+  const terrainLabel = value => ({flat:'Flat',hilly:'Hilly',mountain:'Mountain','individual time-trial':'Individual Time Trial'}[value] || value);
   const same = (a,b) => String(a)===String(b);
   const includes = (filter,value) => !Array.isArray(filter)||filter.some(x=>same(x,value));
   const total = (rows,key) => !rows.length || rows.some(r=>r[key]==null) ? null : rows.reduce((sum,r)=>sum+Number(r[key]),0);
   const unique = (rows,key) => new Set(rows.map(r=>r[key])).size;
   const duration = seconds => seconds==null?'—':`${Math.floor(seconds/3600)}:${String(Math.floor(seconds%3600/60)).padStart(2,'0')}:${String(Math.round(seconds%60)).padStart(2,'0')}`;
   const levelsFor = (dimension,role) => dimension==='terrain'?['terrain','stage','riderResult']:dimension==='country'?(role==='nationality'?['country','rider','stageResult']:['country','team','rider','stageResult']):['team','rider','stageResult'];
-  const levelLabels={country:'Countries',team:'Teams',rider:'Riders',terrain:'Terrain types',stage:'Stages',riderResult:'Rider results',stageResult:'Stage results'};
+  const levelLabels={country:'Countries',team:'Teams',rider:'Riders',terrain:'Stage Types',stage:'Stages',riderResult:'Rider Results',stageResult:'Stage Results'};
   function createModel({metadata,filters={},results=[],standings=[]}){
     const riders=(metadata.riders||[]).filter(r=>includes(filters.team_keys,r.team_key)&&includes(filters.rider_keys,r.rider_key)&&(!filters.young_only||r.is_young_rider));
     const stages=(metadata.stages||[]).filter(s=>filters.stage_scope==='as_of'?Number(s.stage_order||s.stage_id)<=Number(filters.as_of_stage||21):filters.stage_scope==='selection'?includes(filters.stage_ids,s.stage_id)&&includes(filters.stage_types,s.stage_type):true);
@@ -56,9 +56,9 @@
       country:[c('label','Country','label'),c('team_count',role==='nationality'?'Teams represented':'Registered teams'),c('rider_count','Riders'),c('completed','Completed rides')],
       team:[c('label','Team','label'),c('country','Registration','text'),c('rider_count','Riders'),c('rank','Team rank'),c('total_seconds','Team time','duration'),c('completed','Completed rides')],
       rider:[c('label','Rider','label'),c('country','Nationality','text'),c('status','Race status','text'),c('stage_count','Stages completed'),c('selected_seconds','Available-stage time','duration')],
-      terrain:[c('label','Terrain','label'),c('stage_count','Stages'),c('distance','Route km','decimal'),c('rider_count','Riders with results'),c('completed','Completed rides')],
+      terrain:[c('label','Stage Type','label'),c('stage_count','Stages'),c('distance','Route km','decimal'),c('rider_count','Riders with results'),c('completed','Completed rides')],
       stage:[c('label','Stage / route','label'),c('date','Date','text'),c('distance','Route km','decimal'),c('completed','Riders with results')],
-      stageResult:[c('label','Stage / route','label'),c('terrain','Terrain','text'),c('finish_rank','Finish rank'),c('selected_seconds',model.filters.time_basis==='finish'?'Finish time':'Adjusted time','duration'),c('bonus','Bonus (s)'),c('penalty','Penalty (s)')],
+      stageResult:[c('label','Stage / Route','label'),c('terrain','Stage Type','text'),c('finish_rank','Finish Rank'),c('selected_seconds',model.filters.time_basis==='finish'?'Finish Time':'Adjusted Time','duration'),c('bonus','Bonus (s)'),c('penalty','Penalty (s)')],
       riderResult:[c('label','Rider / team','label'),c('finish_rank','Finish rank'),c('selected_seconds',model.filters.time_basis==='finish'?'Finish time':'Adjusted time','duration'),c('bonus','Bonus (s)'),c('penalty','Penalty (s)')]
     }[level];
     const note=level==='team'?`Team time uses ${model.filters.team_aggregation==='cumulative_top3'?'cumulative top 3':'per-stage top 3'}. Ranks retain the global ranking cohort; — means no eligible team standing.`:level==='rider'?'Includes exited riders. Available-stage time is their contribution within this scope, not a GC ranking.':level==='country'?`${role==='nationality'?'Grouped by rider nationality; unknown nationality is excluded.':'Grouped by team registration country; all rider nationalities are included.'} Membership follows the rider/team filters; completed rides also follow stage scope.`:level==='terrain'||level==='stage'?'Route distance is counted once per stage. Completed rides count rider–stage results in the active cohort.':'Finish rank is the recorded stage placing; the time column follows your selected time basis. Rankings are not recalculated for a subgroup.';
@@ -121,7 +121,7 @@
         winner_gap:f.gap_seconds,bonus:f.time_bonus_seconds,penalty:f.time_penalty_seconds
       })).sort((a,b)=>a.stage_id-b.stage_id||a.finish_rank-b.finish_rank);
       base.columns=[col('label',dimension==='terrain'?'Rider / team':'Stage / route','label'),
-        col('date','Date','text'),col('terrain','Terrain','text'),col('finish_rank','Finish rank'),
+        col('date','Date','text'),col('terrain','Stage Type','text'),col('finish_rank','Finish Rank'),
         col('distance','Km','decimal'),col('raw','Finish time','duration'),col('adjusted','Adjusted time','duration'),
         col('winner_gap','Gap to stage winner (s)'),col('bonus','Bonus (s)'),col('penalty','Penalty (s)')];
       if(dimension!=='terrain')base.columns.splice(2,0,col('rider','Rider','text'),col('team','Team','text'));
@@ -193,7 +193,7 @@
   }
   function render(nav){
     const s=nav.state,v=nav.view();
-    const choices=[['team','Team'],['terrain','Stage terrain'],['country','Country']];
+    const choices=[['team','Team'],['terrain','Stage Type'],['country','Country']];
     let html=`
     <div class="drill-dimensions" role="group" aria-label="Drill-down dimension">${choices.map(([key,title])=>`<button type="button" class="drill-dimension ${s.dimension===key?'selected':''}" data-dimension="${key}" aria-pressed="${s.dimension===key}"><strong>${title}</strong><span aria-hidden="true">↘</span></button>`).join('')}</div>
     ${s.dimension==='country'?`<div class="drill-role"><label for="drill-country-role">Country role</label><select id="drill-country-role" class="control-select"><option value="registration" ${s.role==='registration'?'selected':''}>Team registration country</option><option value="nationality" ${s.role==='nationality'?'selected':''}>Rider nationality</option></select></div>`:''}`;

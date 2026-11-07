@@ -9,14 +9,36 @@
 .season-hero h2 {margin:6px 0 0;font-size:clamp(30px,4vw,48px);letter-spacing:-1.8px;}
 .analysis-head {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .analysis-head h3,.analysis-block h3,.explore-shortcuts h3 {margin:0;font-size:clamp(16px,1.5vw,23px);letter-spacing:-.035em;line-height:1.24;color:var(--ink-primary)}
-.podium-summary,.stage-trend-card {padding:20px 24px}
-.finish-pair {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}
-.finish-rider {display:grid;grid-template-columns:minmax(0,1fr) auto;text-align:left;cursor:pointer;border:0;border-top:3px solid #cbd5dc;background:#f7f9fa;border-radius:4px;padding:14px 16px;gap:4px;color:var(--ink-primary);font-family:inherit}
-.finish-rider:first-child {border-top-color:#dbb82c;background:#fffbee}
+.podium-summary,.stage-trend-card,.overview-mini-card {padding:20px 24px}
+.overview-awards-block {display:grid;gap:0}
+.overview-award-section + .overview-award-section {padding-top:20px}
+.overview-analytics-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.finish-pair {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;gap:18px;margin-top:30px}
+.finish-rider {display:grid;min-height:132px;text-align:left;cursor:pointer;border:0;border-top:3px solid #cbd5dc;background:#f7f9fa;border-radius:4px;padding:18px 20px;gap:7px;color:var(--ink-primary);font-family:inherit}
+.finish-rider:nth-child(1) {border-top-color:#9aa7ae;background:#f7f8f9}
+.finish-rider:nth-child(2) {border-top-color:#dbb82c;background:#fffbee}
+.finish-rider:nth-child(3) {border-top-color:#b87333;background:#fff8f2}
+.finish-rider.podium-winner {min-height:154px;transform:translateY(-14px);box-shadow:0 8px 20px rgba(24,57,74,.09)}
+.award-medal {margin-right:4px;font-size:15px}
 .finish-rider small,.finish-rider span {font-size:11px;color:#4a5e6a}
-.finish-rider small,.finish-rider strong,.finish-rider span {grid-column:1}
-.finish-rider strong {font-size:clamp(16px,2vw,25px);line-height:1.15}
-.finish-rider b {grid-column:2;grid-row:2/4;align-self:center;font-size:clamp(16px,2.2vw,28px);font-variant-numeric:tabular-nums;color:#0f6762}
+.finish-rider strong {font-size:clamp(18px,2vw,27px);line-height:1.15;overflow-wrap:anywhere}
+.finish-rider.podium-winner strong {font-size:clamp(21px,2.3vw,31px)}
+.finish-rider[data-award-kind="team"] strong {font-size:clamp(12px,1.25vw,18px);letter-spacing:-.02em;overflow:hidden;overflow-wrap:normal;text-overflow:ellipsis;white-space:nowrap}
+.finish-rider[data-award-kind="team"].podium-winner strong {font-size:clamp(13px,1.35vw,19px)}
+.stage-type-donut-layout {display:grid;grid-template-columns:minmax(110px,150px) minmax(0,1fr);align-items:center;gap:16px;margin-top:12px}
+.stage-type-donut {display:grid;place-items:center;width:100%;aspect-ratio:1;border-radius:50%;background:var(--stage-type-donut);position:relative}
+.stage-type-donut::after {content:"";position:absolute;inset:24%;border-radius:50%;background:#fff}
+.stage-type-donut > span {z-index:1;display:grid;text-align:center;color:#536974;font-size:10px;text-transform:uppercase;letter-spacing:.08em}
+.stage-type-donut strong {color:#18394a;font-size:24px;line-height:1}
+.stage-type-legend {display:grid;gap:8px;margin:0;padding:0;list-style:none;font-size:12px}
+.stage-type-legend li {display:grid;grid-template-columns:9px minmax(0,1fr) auto;align-items:center;gap:7px}
+.stage-type-legend i {width:9px;height:9px;border-radius:50%}
+.overview-ranking-bars {display:grid;gap:9px;margin-top:12px}
+.overview-ranking-row {display:grid;gap:5px;width:100%;padding:0;border:0;background:transparent;color:var(--ink-primary);font:inherit;text-align:left;cursor:pointer}
+.overview-ranking-label {display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:baseline;gap:6px;font-size:12px}
+.overview-ranking-label b {color:#0b6f6a}.overview-ranking-label strong {overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.overview-ranking-label em {color:#536974;font-style:normal;font-variant-numeric:tabular-nums}
+.overview-ranking-track {height:7px;overflow:hidden;border-radius:8px;background:#e4eaed}.overview-ranking-track i {display:block;height:100%;border-radius:inherit;background:#0b6f6a}
+.overview-ranking-row:hover strong,.overview-ranking-row:focus-visible strong {text-decoration:underline}
 .explore-shortcuts {display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .explore-shortcuts h3 {margin-right:8px}
 .explore-shortcuts button,.analysis-tabs button,.analysis-segment button,.analysis-toolbar button {background:#fff;color:#1d3d49;border:1px solid #d5dfe4;padding:8px 12px;border-radius:7px;cursor:pointer;font:600 13px/1.35 var(--font-sans)}
@@ -53,7 +75,8 @@
 .trend-unit {margin:6px 0 2px}
 .drill-measure-select {display:flex;align-items:center;gap:12px;font-weight:600;margin:12px 0}
 .drill-context .drill-selected-measure {font-weight:750;color:#096661}
-@media(max-width:750px){.finish-pair,.analysis-split{grid-template-columns:1fr}.analysis-page{gap:12px}.finish-pair{gap:6px}.analysis-block,.podium-summary,.stage-trend-card{padding:14px}.portal-sidebar .rail-nav{display:flex;flex-wrap:wrap}.portal-sidebar .exploration-entry{margin:0;border:0}.portal-sidebar .rail-nav .rail-item{padding:7px 11px}}
+@media(max-width:1000px){.overview-analytics-grid{grid-template-columns:1fr}}
+@media(max-width:750px){.finish-pair,.analysis-split{grid-template-columns:1fr}.analysis-page{gap:12px}.finish-pair{gap:8px;margin-top:14px}.finish-rider,.finish-rider.podium-winner{min-height:0;transform:none}.analysis-block,.podium-summary,.stage-trend-card,.overview-mini-card{padding:14px}.stage-type-donut-layout{grid-template-columns:120px minmax(0,1fr)}.portal-sidebar .rail-nav{display:flex;flex-wrap:wrap}.portal-sidebar .exploration-entry{margin:0;border:0}.portal-sidebar .rail-nav .rail-item{padding:7px 11px}}
 
 
 #workspace-heading:focus {outline:0}

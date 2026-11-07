@@ -5,8 +5,44 @@
   function raceSummary(meta) {
     if (!meta || !meta.riders?.length || !meta.stages?.length || !meta.teams?.length) return null;
     return { starters: meta.riders.length, finishers: meta.riders.filter(r => Number(r.finished_race_flag) === 1).length,
-      teams: meta.teams.length, stages: meta.stages.length,
+      teams: meta.teams.length, countries: meta.countries?.length ?? 0, stages: meta.stages.length,
       distance: meta.stages.every(s => s.distance_km != null) ? meta.stages.reduce((a,s) => a + Number(s.distance_km), 0) : null };
+  }
+  const stageTypeLabel = value => value === 'individual time-trial' ? 'Individual Time Trial' :
+    String(value ?? '').replace(/^./, first => first.toUpperCase());
+  function stageTypeDonutMarkup(rows) {
+    if (!rows.length) return '<p class="analysis-empty">No stages match the current scope.</p>';
+    const palette = ['#0b6f6a','#f2c94c','#2f5f8f','#c65a2e','#76528c'];
+    const counts = new Map();
+    for (const row of rows) counts.set(row.stage_type, (counts.get(row.stage_type) || 0) + 1);
+    const entries = [...counts].sort((a,b) => b[1]-a[1] || stageTypeLabel(a[0]).localeCompare(stageTypeLabel(b[0])));
+    const total = entries.reduce((sum,[,count]) => sum + count, 0);
+    let cursor = 0;
+    const stops = entries.map(([,count], index) => {
+      const start = cursor;
+      cursor += 100 * count / total;
+      return `${palette[index % palette.length]} ${start.toFixed(2)}% ${cursor.toFixed(2)}%`;
+    }).join(',');
+    const summary = entries.map(([type,count]) => `${stageTypeLabel(type)} ${count}`).join(', ');
+    return `<div class="stage-type-donut-layout"><div class="stage-type-donut" role="img" aria-label="Stage Type Composition: ${escape(summary)}" style="--stage-type-donut:conic-gradient(${stops})"><span><strong>${total}</strong>Stages</span></div><ul class="stage-type-legend">${entries.map(([type,count],index) =>
+      `<li><i style="background:${palette[index % palette.length]}"></i><span>${escape(stageTypeLabel(type))}</span><strong>${count}</strong></li>`).join('')}</ul></div>`;
+  }
+  function compactTime(seconds) {
+    if (seconds == null || !Number.isFinite(Number(seconds))) return '—';
+    const value = Math.round(Number(seconds));
+    return `${Math.floor(value/3600)}:${String(Math.floor(value/60)%60).padStart(2,'0')}:${String(value%60).padStart(2,'0')}`;
+  }
+  function rankingBarsMarkup(rows, kind) {
+    const shown = rows.slice(0,5);
+    if (!shown.length) return '<p class="analysis-empty">Ranking unavailable.</p>';
+    const key = kind === 'team' ? 'team_key' : 'rider_key';
+    const name = kind === 'team' ? 'team_name' : 'rider_name';
+    const maxGap = Math.max(0,...shown.map(row => Number(row.gap_seconds) || 0));
+    return `<div class="overview-ranking-bars" role="list">${shown.map((row,index) => {
+      const width = maxGap ? 40 + 60 * (1 - (Number(row.gap_seconds) || 0) / maxGap) : 100 - index * 10;
+      const value = Number(row.rank) === 1 ? compactTime(row.total_seconds) : `+${compactTime(row.gap_seconds)}`;
+      return `<button type="button" role="listitem" class="overview-ranking-row" data-overview-${kind}="${Number(row[key])}"><span class="overview-ranking-label"><b>#${Number(row.rank)}</b><strong>${escape(row[name])}</strong><em>${escape(value)}</em></span><span class="overview-ranking-track"><i style="width:${width.toFixed(1)}%"></i></span></button>`;
+    }).join('')}</div>`;
   }
   function stageChartMarkup(rows) {
     if (!rows.length) return '<p class="chart-empty">No stages match the current scope.</p>';
@@ -36,7 +72,7 @@
     const [index,key] = tabs[module] || tabs.stage_summary;
     return {index,key};
   }
-  const api = { raceSummary, stageChartMarkup, chartTabForModule };
+  const api = { raceSummary, stageTypeDonutMarkup, rankingBarsMarkup, stageChartMarkup, chartTabForModule };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.RaceAppearance = api;
 })(typeof window !== 'undefined' ? window : globalThis);

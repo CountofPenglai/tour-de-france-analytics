@@ -32,7 +32,7 @@ For an existing external Metabase instance, the provisioner's CLI can accept exp
 | `param_stage_scope` | `stage_scope` (`tag_stage_scope`) | `Stage Scope` | `string/=` (single) | `"final"` | Static list: `final`, `as_of`, `selection` |
 | `param_as_of_stage` | `as_of_stage` (`tag_as_of_stage`) | `As-Of Stage` | `number/=` (single) | `21` | `dw.dim_stage` (`[stage_id, "Stage N: Start -> Finish"]`) |
 | `param_stage_ids` | `stage_ids` (`tag_stage_ids`) | `Stage` | `number/=` (multi) | All stages | `dw.dim_stage` (`[stage_id, "Stage N: Start -> Finish (type)"]`) |
-| `param_stage_types` | `stage_types` (`tag_stage_types`) | `Stage Terrain` | `string/=` (multi) | All terrains | Static list: `flat`, `hilly`, `mountain`, `individual time-trial` |
+| `param_stage_types` | `stage_types` (`tag_stage_types`) | `Stage Type` | `string/=` (multi) | All stage types | Static list: `flat`, `hilly`, `mountain`, `individual time-trial` |
 | `param_time_basis` | `time_basis` (`tag_time_basis`) | `Time Basis` | `string/=` (single) | `"adjusted"` | Static list: `adjusted`, `finish` |
 | `param_rank_scope` | `rank_scope` (`tag_rank_scope`) | `Rank Scope` | `string/=` (single) | `"overall"` | Static list: `overall`, `filtered` |
 | `param_team_keys` | `team_keys` (`tag_team_keys`) | `Team` | `number/=` (multi) | All teams | `dw.dim_team` (`[team_key, team_name]`) |
@@ -83,7 +83,7 @@ Key properties:
 | `dw.terrain_performance` | Selected stages | Yes | Raw time for speed and winner gaps | Overall or selected group | Yes | No |
 | `dw.country_outcomes` | Final GC and participation use the whole race. Honors follow the selected stages | Honors only | Adjusted final GC | Overall GC | Yes | Applied on the country summary |
 | `dw.olap_rollup` | Full-race view | `stage_types` applied | Shows both raw & adjusted sums | N/A | `team_keys` applied | No |
-| `Rider Terrain Specialisation · Pivot (Full Race)` | Unparameterized full-race teaching card (all 21 stages) | Unmapped | N/A | N/A | Unmapped | No |
+| `Rider Stage Type Specialisation · Pivot (Full Race)` | Unparameterized full-race teaching card (all 21 stages) | Unmapped | N/A | N/A | Unmapped | No |
 
 ---
 
@@ -95,10 +95,10 @@ Key properties:
 | --- | --- | --- | --- | --- |
 | `caption_overview_scope` | *(Markdown Caption)* | `text` | N/A | No-op |
 | `overview_kpi_summary` | `Race at a Glance` | `table` | `dw.fact_participation`, `dw.dim_stage`, `dw.stage_summary` | **No-op** (KPI baseline: 184 starters, 160 finishers, 23 teams, 21 stages, unique km) |
-| `overview_terrain_distance_bar` | `Distance by Stage Terrain` | `bar` | `dw.stage_summary` | Terrain → Stage Summary (**Step 1 of Stage Terrain -> Stage -> Rider**) |
+| `overview_terrain_distance_bar` | `Distance by Stage Type` | `bar` | `dw.stage_summary` | Stage Type → Stage Summary (**Step 1 of Stage Type -> Stage -> Rider**) |
 | `overview_stage_finisher_trend_line` | `Stage Finisher Trend` | `line` | `dw.stage_summary` | Stage → Stage Results |
-| `overview_stage_summary_table` | `Stage Routes` | `table` | `dw.stage_summary` | Stage → Stage Results (**Step 2 of Stage Terrain -> Stage -> Rider**) |
-| `overview_stage_rider_results_table` | `Stage Rider Results` | `table` | `dw.rider_stage_results` | Rider → Stage Trajectory (**Step 3 of Stage Terrain -> Stage -> Rider**) |
+| `overview_stage_summary_table` | `Stage Routes` | `table` | `dw.stage_summary` | Stage → Stage Results (**Step 2 of Stage Type -> Stage -> Rider**) |
+| `overview_stage_rider_results_table` | `Stage Rider Results` | `table` | `dw.rider_stage_results` | Rider → Stage Trajectory (**Step 3 of Stage Type -> Stage -> Rider**) |
 
 ### Tab 2: `Classifications Comparison` (ID assigned during initialization)
 
@@ -120,7 +120,7 @@ Key properties:
 | --- | --- | --- | --- | --- |
 | `insight_team_depth_table` | `Team Competitiveness & Depth` | `table` | `dw.team_depth` | Team → Full Roster |
 | `insight_team_depth_bar` | `Team Top-10 Stage Coverage` | `bar` | `dw.team_depth` | Team → Full Roster |
-| `perf_team_member_contributions` | `Rider contributions to team time` | `table` | `dw.team_roster_performance` | Rider → daily results |
+| `perf_team_member_contributions` | `Rider Contributions to Team Time` | `table` | `dw.team_roster_performance` | Rider → daily results |
 | `perf_rider_standings_table` | `Rider Cumulative Standings` | `table` | `dw.rider_standings` (`gc`, with `bib_number`) | Rider → Stage Trajectory (**Step 2 of Team -> Rider -> Stage**) |
 | `perf_rider_stage_trajectory_line` | `Rider Stage Percentile Trajectory` | `line` | `dw.rider_standings`, `dw.rider_stage_results` | Stage → Stage Results (**Step 3 of Team -> Rider -> Stage**) |
 | `perf_rider_stage_detail_table` | `Rider Stage Results` | `table` | `dw.rider_stage_results` (with `bib_number`) | Stage → Stage Results (**Step 3 of Team -> Rider -> Stage**) |
@@ -142,15 +142,15 @@ Key properties:
 
 | Slug | Title | Display | Underlying SQL Interface | Click Destination (new portal tab) |
 | --- | --- | --- | --- | --- |
-| `insight_terrain_speed` | `Terrain speed and mountain results` | `table` | `dw.terrain_performance` | Team → roster |
-| `insight_rider_specialisation_crosstab_table` | `Rider Terrain Specialisation · Cross-Tab` | `table` | `dw.rider_specialisation` (4 terrain columns) | Rider → Stage Trajectory |
-| `insight_rider_specialisation_detail_bar` | `Rider Terrain Specialisation · Breakdown` | `bar` | `dw.rider_standings`, `dw.rider_specialisation` | Terrain → Stage Summary |
+| `insight_terrain_speed` | `Stage Type Speed and Mountain Results` | `table` | `dw.terrain_performance` | Team → roster |
+| `insight_rider_specialisation_crosstab_table` | `Rider Stage Type Specialisation · Cross-Tab` | `table` | `dw.rider_specialisation` (4 stage type columns) | Rider → Stage Trajectory |
+| `insight_rider_specialisation_detail_bar` | `Rider Stage Type Specialisation · Breakdown` | `bar` | `dw.rider_standings`, `dw.rider_specialisation` | Stage Type → Stage Summary |
 | `insight_gc_evolution_line` | `GC Gap Evolution` | `line` | `dw.gc_evolution` (default Final GC Top 5) | Stage → Stage Results |
 | `insight_gc_evolution_deltas_table` | `GC Stage Deltas & Bonuses` | `table` | `dw.gc_evolution` | Rider → Stage Trajectory |
-| `insight_time_rules` | `GC under four timing rules` | `table` | `dw.gc_time_rules` | Rider → daily results |
+| `insight_time_rules` | `GC Under Four Timing Rules` | `table` | `dw.gc_time_rules` | Rider → daily results |
 | `insight_olap_rollup_table` | `Team × Terrain OLAP Roll-Up` | `table` | `dw.olap_rollup` (`GROUP BY ROLLUP`) | **No-op** |
 | `insight_rider_specialisation_pivot_source` | `Rider Stage Percentile Source (Pivot Base)` | `table` *(hidden)* | `dw.rider_stage_results()` | **No-op** (Supporting source question) |
-| `insight_rider_specialisation_pivot` | `Rider Terrain Specialisation · Pivot (Full Race)` | `pivot` | MBQL Query Builder over `card__<source_id>` (`AVG(rank_percentile)`, `COUNT(*)`) | **No-op** (Full-race teaching card; no global filter mapping) |
+| `insight_rider_specialisation_pivot` | `Rider Stage Type Specialisation · Pivot (Full Race)` | `pivot` | MBQL Query Builder over `card__<source_id>` (`AVG(rank_percentile)`, `COUNT(*)`) | **No-op** (Full-race teaching card; no global filter mapping) |
 
 ---
 
@@ -161,10 +161,10 @@ Key properties:
    - Metabase's `display = "pivot"` renderer requires a structured Query Builder (`type = "query"`) query with aggregations and at least two breakouts; it cannot render a raw `type = "native"` SQL question directly as a Pivot widget.
    - Conversely, a Query Builder question backed by a saved SQL question (`"source-table": "card__<source_id>"`) cannot forward native template-tag JSONB parameters into the underlying SQL function call.
    - To provide both full interactivity and a genuine Metabase Pivot table:
-     - **Cross-Tab card (`Rider Terrain Specialisation · Cross-Tab`)** calls `dw.rider_specialisation(p_filters)` in native SQL, pivots the 4 terrain types (`flat`, `hilly`, `mountain`, `individual time-trial`), and responds to all global dashboard filters (`stage_scope`, `as_of_stage`, `stage_ids`, `stage_types`, `time_basis`, `team_keys`, `rider_keys`, `young_only`).
-     - **Pivot card (`Rider Terrain Specialisation · Pivot (Full Race)`)** uses Metabase's documented `Saved SQL Question -> Query Builder Aggregation -> Pivot` pattern over the supporting question (`insight_rider_specialisation_pivot_source`: `SELECT rider_key, team_key, bib_number, ('#' || bib_number || ' ' || rider_name) AS rider_label, stage_id, stage_type, rank_percentile FROM dw.rider_stage_results();`) with `AVG(rank_percentile)` and `COUNT(*)` broken out by `rider_label` × `stage_type` and `pivot_table.column_split` configured. It is explicitly labeled and documented as a full-race supplementary card without global filter mappings.
+     - **Cross-Tab card (`Rider Stage Type Specialisation · Cross-Tab`)** calls `dw.rider_specialisation(p_filters)` in native SQL, pivots the 4 stage types (`flat`, `hilly`, `mountain`, `individual time-trial`), and responds to all global dashboard filters (`stage_scope`, `as_of_stage`, `stage_ids`, `stage_types`, `time_basis`, `team_keys`, `rider_keys`, `young_only`).
+     - **Pivot card (`Rider Stage Type Specialisation · Pivot (Full Race)`)** uses Metabase's documented `Saved SQL Question -> Query Builder Aggregation -> Pivot` pattern over the supporting question (`insight_rider_specialisation_pivot_source`: `SELECT rider_key, team_key, bib_number, ('#' || bib_number || ' ' || rider_name) AS rider_label, stage_id, stage_type, rank_percentile FROM dw.rider_stage_results();`) with `AVG(rank_percentile)` and `COUNT(*)` broken out by `rider_label` × `stage_type` and `pivot_table.column_split` configured. It is explicitly labeled and documented as a full-race supplementary card without global filter mappings.
 2. **Chart Axis Clarity**:
-   - Bar and line charts plot a single unit per axis (`Distance by Stage Terrain` plots `total_distance_km` in km; `Stage Finisher Trend` plots `finisher_count` in riders; `Team Top-10 Stage Coverage` plots `top10_stage_coverage_pct` in `%`), while companion tables display the full multi-unit metric set.
+   - Bar and line charts plot a single unit per axis (`Distance by Stage Type` plots `total_distance_km` in km; `Stage Finisher Trend` plots `finisher_count` in riders; `Team Top-10 Stage Coverage` plots `top10_stage_coverage_pct` in `%`), while companion tables display the full multi-unit metric set.
 3. **Metadata-Informed Table Formatting & Merged `column_settings`**:
    - During live provisioning (`ensure_cards()` and `ensure_dashboard()`), the provisioner inspects each native table card's `result_metadata` (or `POST /api/card/{id}/query` `data.cols`) and builds `visualization_settings["table.columns"]`.
    - Internal surrogate key columns (`rider_key`, `team_key`, `stage_key`, `country_key`, `winner_rider_key`) are configured with `"enabled": false` in `table.columns` so they are hidden in the table UI while remaining in the query result set as URL source columns (`{{column:rider_key}}`, `{{column:team_key}}`, etc.), whereas official `bib_number`, `stage_id`, and human-readable columns remain `"enabled": true`.
@@ -180,15 +180,15 @@ Both the native dashboard and its signed static embed use Metabase custom URL cl
 
 | Clicked dimension | Portal destination |
 | --- | --- |
-| Terrain | `?view=explore&module=stage_summary&stage_scope=selection&stage_types=<terrain>` |
+| Stage Type | `?view=explore&module=stage_summary&stage_scope=selection&stage_types=<stage_type>` |
 | Stage | `?drill=stage&stage_id=<id>` |
 | Rider | `?drill=rider&rider_key=<key>` |
 | Team | `?drill=team&team_key=<key>` |
 | Country | `?drill=country&country_code=<code>` |
 
 - `--portal-base-url` (or `PORTAL_BASE_URL`) configures the link base; the default is `http://127.0.0.1:8000`. Only HTTP(S) bases without credentials, query strings or fragments are accepted. No embedding JWT or login credential is placed in a detail link.
-- URLs forward Stage Scope, As-Of Stage, Stage, Stage Terrain, Time Basis, Rank Scope, Team, Rider, and Young Rider values. Multi-selection values arrive as comma-separated lists. In Metabase 0.65.2.5, filter templates use the **display name**, such as `{{filter:Stage Scope}}` and `{{filter:Team}}`; column templates use raw result-column names.
-- A terrain click explicitly selects that terrain and clears conflicting stage IDs/as-of bounds. An explicit stage/rider/team identifies the requested detail. The portal keeps the remaining applicable filters and exposes its current scope.
+- URLs forward Stage Scope, As-Of Stage, Stage, Stage Type, Time Basis, Rank Scope, Team, Rider, and Young Rider values. Multi-selection values arrive as comma-separated lists. In Metabase 0.65.2.5, filter templates use the **display name**, such as `{{filter:Stage Scope}}` and `{{filter:Team}}`; column templates use raw result-column names.
+- A stage type click explicitly selects that type and clears conflicting stage IDs/as-of bounds. An explicit stage/rider/team identifies the requested detail. The portal keeps the remaining applicable filters and exposes its current scope.
 - Team tables carry their fixed aggregation method. The comparison chart carries the clicked `aggregation_method`; the portal normalizes “Per-stage Top 3” / “Cumulative Top 3” to its two method keys.
 - Table links are attached to meaningful labels (rider/bib, team, stage, country) where the matching identifier exists; arbitrary numeric cells do not become navigation buttons. Hidden identifier columns remain available to link templates.
 - Country details use the union of rider nationality and team registration, distinguish both roles, and avoid duplicate members. Their team/rider buttons continue into the Inspector. P1 internal drills stay in the same page and provide Back/Clear controls.

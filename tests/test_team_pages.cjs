@@ -28,7 +28,7 @@ test('team depth opens its full roster including zero contributions and narrows 
   }
   const {ctx,element,drills,click} = fixture({team_depth:[depth],team_roster_performance:[rider(11,'Scorer',2),rider(12,'Zero <Exit>',0)]});
   await window.RacePages.team_standings(ctx);
-  assert.ok(element.innerHTML.indexOf('Top-10 riders') < element.innerHTML.indexOf('Team standings'));
+  assert.ok(element.innerHTML.indexOf('Top-10 riders') < element.innerHTML.indexOf('Team Standings'));
   assert.match(element.innerHTML,/Zero &lt;Exit&gt;/);
   click('contributors',1);
   assert.doesNotMatch(element.innerHTML.split('Top-10 finishes by terrain')[0],/Zero &lt;Exit&gt;/);

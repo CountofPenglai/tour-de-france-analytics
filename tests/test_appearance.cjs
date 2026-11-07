@@ -1,15 +1,23 @@
 const assert = require('node:assert/strict');
-const { raceSummary, stageChartMarkup } = require('../web/static/appearance.js');
+const { raceSummary, stageTypeDonutMarkup, rankingBarsMarkup, stageChartMarkup } = require('../web/static/appearance.js');
 assert.equal(raceSummary(null), null, 'missing metadata must not masquerade as zero riders');
 assert.equal(raceSummary({teams:[], riders:[], stages:[]}), null);
-assert.deepEqual(raceSummary({teams:[{}],riders:[{finished_race_flag:1},{finished_race_flag:0}],stages:[{distance_km:12.5},{distance_km:10}]}),{starters:2,finishers:1,teams:1,stages:2,distance:22.5});
+assert.deepEqual(raceSummary({teams:[{}],countries:[{},{}],riders:[{finished_race_flag:1},{finished_race_flag:0}],stages:[{distance_km:12.5},{distance_km:10}]}),{starters:2,finishers:1,teams:1,countries:2,stages:2,distance:22.5});
+const donut = stageTypeDonutMarkup([{stage_type:'flat'},{stage_type:'flat'},{stage_type:'individual time-trial'}]);
+assert.match(donut,/Stage Type Composition/);
+assert.match(donut,/Individual Time Trial/);
+assert.match(donut,/>3<\/strong>Stages/);
+const bars = rankingBarsMarkup([{rank:1,rider_key:7,rider_name:'Rider <One>',total_seconds:3600,gap_seconds:0},{rank:2,rider_key:8,rider_name:'Rider Two',total_seconds:3660,gap_seconds:60}],'rider');
+assert.match(bars,/data-overview-rider="7"/);
+assert.match(bars,/Rider &lt;One&gt;/);
+assert.match(bars,/\+0:01:00/);
 const html = stageChartMarkup([{stage_id:5,finisher_count:179,stage_type:'mountain',route_description:'<script>alert(1)</script>'}]);
 assert.match(html,/Stage 5: 179 finishers/);
 assert.match(html,/data-stage-id="5"/);
 assert.ok(!html.includes('<script>'));
 assert.match(stageChartMarkup([]),/No stages match/);
 assert.match(stageChartMarkup([{stage_id:1,finisher_count:null}]),/No stage finisher counts/);
-console.log('Appearance: 7 assertions passed');
+console.log('Appearance helpers passed');
 
 const appearance = require('../web/static/appearance.js');
 assert.equal(appearance.chartTabForModule('rider_standings').key,'tab_2_classifications');

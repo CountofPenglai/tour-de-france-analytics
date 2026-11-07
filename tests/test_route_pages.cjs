@@ -12,7 +12,9 @@ function fixture(overrides) {
     go() {}, drill() {}, ...overrides,
   };
   return {ctx, root, click: async (action, value, extra = {}) =>
-    root.onclick({target: {closest: () => ({dataset: {action, value: String(value), ...extra}})}})};
+    root.onclick({target: {closest: () => ({dataset: {action, value: String(value), ...extra}})}}),
+    changeType: async (value, checked) => root.onchange({target: {closest: selector => selector.startsWith("input") ?
+      {value, checked, closest: () => ({open:true})} : null}})};
 }
 
 const stage = (id, type, km) => ({
@@ -28,15 +30,31 @@ const results = [result(1, 1, 8), result(10, 2, 8), result(10, 3, 9), result(12,
 
 test("stage shortcuts, source rank ties, full results, same-stage team evidence and rider trend", async () => {
   const requests = [], drills = [], trips = [];
-  const {ctx, root, click} = fixture({filters: {young_only: true}, report: async () => stages,
+  const {ctx, root, click, changeType} = fixture({filters: {young_only: true}, report: async () => stages,
     analytics: async (name, f) => {requests.push(f); return results;},
     drill: d => drills.push(d), go: (...args) => trips.push(args)});
   await window.RacePages.stage_summary(ctx);
   assert.match(root.innerHTML, /Winner &lt;1&gt;/);
   assert.match(root.innerHTML, /1:06:30/);
+  assert.match(root.innerHTML, /Start Location/);
+  assert.match(root.innerHTML, /Finish Location/);
+  assert.match(root.innerHTML, /All Stage Types/);
+  assert.doesNotMatch(root.innerHTML, /<span>Type<\/span>/);
+  assert.doesNotMatch(root.innerHTML, /<select[^>]+stage-type/);
+  assert.doesNotMatch(root.innerHTML, /class="route-selected"/);
+  assert.doesNotMatch(root.innerHTML, /Individual time trials/);
+  assert.match(root.innerHTML, /data-scroll="stage-top-ten"/);
   assert.doesNotMatch(root.innerHTML, /Rider 4</);
+  await changeType("flat", true);
+  await changeType("hilly", true);
+  assert.deepEqual(ctx.preferences.stageTypes, ["flat","hilly"]);
+  assert.match(root.innerHTML, /2 Stage Types/);
+  assert.match(root.innerHTML, /Stage 1/);
+  assert.match(root.innerHTML, /Stage 2/);
+  assert.doesNotMatch(root.innerHTML, /Stage 5/);
   await click("stage-mode", "longest");
   assert.equal(ctx.preferences.stageId, 2);
+  assert.match(root.innerHTML, /<tr class="route-selected">[\s\S]*?Stage 2/);
   assert.deepEqual(requests.at(-1), {stage_scope:"selection", stage_ids:[2], young_only:true});
   await click("team", 8);
   assert.equal((root.innerHTML.match(/class="route-contributor"/g)||[]).length, 2);
@@ -50,15 +68,24 @@ test("stage shortcuts, source rank ties, full results, same-stage team evidence 
   assert.match(root.innerHTML, /Rider trend/);
   await click("trend", 2);
   assert.deepEqual(trips.at(-1), ["gc_evolution", {riderKey:2}]);
-  await click("stage-mode", "itt");
-  assert.equal(ctx.preferences.stageId, 5);
-  assert.doesNotMatch(root.innerHTML, /Start 2/);
+  await click("stage-sort", "distance");
+  assert.equal(ctx.preferences.stageSort.key, "distance");
+  assert.equal(ctx.preferences.stageSort.desc, true);
+  assert.match(root.innerHTML, /Distance \(km\) ↓/);
+  await click("stage-sort", "distance");
+  assert.equal(ctx.preferences.stageSort.desc, false);
+  assert.match(root.innerHTML, /Distance \(km\) ↑/);
+  await click("stage-mode", "order");
+  assert.equal(ctx.preferences.stageId, 1);
+  assert.doesNotMatch(root.innerHTML, /class="route-selected"/);
 });
 
-test("an explicit stage link escapes a previous ITT shortcut and an empty stage scope fetches no results", async () => {
-  const first = fixture({preferences: {stageId:2,stageMode:"itt"}, report: async () => stages});
+test("an explicit stage link clears an incompatible saved type and an empty stage scope fetches no results", async () => {
+  const first = fixture({preferences: {stageId:2,stageMode:"itt",stageType:"individual time-trial"}, report: async () => stages});
   await window.RacePages.stage_summary(first.ctx);
   assert.equal(first.ctx.preferences.stageId, 2);
+  assert.equal(first.ctx.preferences.stageType, "");
+  assert.deepEqual(first.ctx.preferences.stageTypes, []);
   assert.match(first.root.innerHTML, /Start 2/);
   let calls = 0;
   const empty = fixture({filters: {stage_ids:[]}, preferences: {stageId:5}, analytics: async () => { calls++; return results; }});
