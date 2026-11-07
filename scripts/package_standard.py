@@ -12,7 +12,7 @@ ROOT_FILES = {
     '.gitignore', '.dockerignore', '.gitattributes',
 }
 TREE_SUFFIXES = {
-    'web': {'.py', '.html', '.css', '.js', '.svg', '.jpg', '.png', '.md'},
+    'web': {'.py', '.html', '.css', '.js', '.svg', '.jpg', '.png', '.md', '.ttf'},
     'sql': {'.sql'}, 'data': {'.csv'}, 'deploy': {'.py', '.sh'},
     'tests': {'.py', '.cjs', '.json', '.sql'},
 }
@@ -26,7 +26,7 @@ def collect_files(root: Path) -> list[Path]:
     candidates = [root / name for name in ROOT_FILES]
     candidates += [root / 'scripts' / name for name in SCRIPTS]
     candidates += [root / 'docs' / name for name in DOCS]
-    candidates += [root / 'docs/screenshots/team-depth.png']
+    candidates += [root / 'docs/screenshots/team-depth.png', root / 'web/static/assets/fonts/OFL.txt']
     for directory, suffixes in TREE_SUFFIXES.items():
         base = root / directory
         if base.is_symlink():

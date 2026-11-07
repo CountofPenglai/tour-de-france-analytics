@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tour de France 2025 · Race Analytics</title>
+  <link rel="preload" href="/static/assets/fonts/BarlowCondensed-ExtraBoldItalic.ttf" as="font" type="font/ttf" crossorigin />
+  <link rel="preload" href="/static/assets/fonts/BarlowCondensed-Medium.ttf" as="font" type="font/ttf" crossorigin />
   <link rel="stylesheet" href="/static/styles.css" />
   <link rel="stylesheet" href="/static/appearance.css" />
   <link rel="stylesheet" href="/static/refinements.css" />
@@ -172,27 +174,21 @@
 
     <!-- Main Content Column -->
     <main class="portal-main">
-      <!-- Top Editorial Context Bar & Scope Interpretation Banner -->
-      <header class="editorial-topbar">
+      <header class="editorial-topbar compact-topbar">
         <div class="topbar-title-block"><h2 id="workspace-heading" class="workspace-heading">Race overview</h2></div>
-        <div class="topbar-actions"><a id="topbar-p0-link" href="http://127.0.0.1:3000" target="_blank" rel="noopener noreferrer" class="topbar-link">Open Metabase ↗</a><button type="button" id="open-inspector-btn" hidden class="btn-secondary btn-compact">Inspect a rider ↗</button><button type="button" id="open-filters-btn" class="btn-primary btn-compact" aria-haspopup="dialog">Filters <span aria-hidden="true">≡</span></button></div>
+        <div class="topbar-actions">
+          <a id="topbar-p0-link" href="http://127.0.0.1:3000" target="_blank" rel="noopener noreferrer" class="topbar-link">Metabase ↗</a>
+          <button type="button" id="open-filters-btn" class="scope-control" aria-haspopup="dialog" aria-controls="filter-drawer">
+            <span class="scope-summary">
+              <span id="active-scope-pill" class="scope-range">Final race · stages 1–21</span>
+              <span class="scope-detail"><span id="active-basis-pill">Adjusted time</span><span id="active-cohort-label"></span></span>
+            </span>
+            <span class="scope-action">Filters <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 6h5m4 0h5M3 14h9m4 0h1"/><circle cx="10" cy="6" r="2"/><circle cx="14" cy="14" r="2"/></svg></span>
+          </button>
+          <button type="button" id="open-inspector-btn" hidden class="btn-secondary btn-compact">Inspect a rider ↗</button>
+        </div>
       </header>
-      <div id="page-return" class="page-return" hidden><button type="button" id="page-return-btn" class="analysis-link">← Back</button></div><div class="active-scope-bar"><span class="scope-label">Scope</span><span id="active-scope-pill" class="chip chip-yellow">Final full race</span><span id="active-basis-pill" class="chip chip-navy">Adjusted time</span><span id="active-cohort-label" class="cohort-label"></span></div>
-      <!-- Honest Metric & Scope Interpretation Banner -->
-      <details class="scope-notice-banner"><summary>Calculation notes</summary><div class="scope-notice-content">
-        <div class="notice-col">
-          <strong class="notice-heading" id="scope-explanation-title">Final standings:</strong>
-          <span id="scope-explanation-body">
-            Cumulative standings require completing all 21 stages (160 of 184 starters). Exited riders retain stage results and team roster records but do not receive a final 21-stage GC rank.
-          </span>
-        </div>
-        <div class="notice-col notice-proxy">
-          <strong class="notice-heading">Proxy scores:</strong>
-          <span>
-            <em>Points Proxy</em> and <em>KOM Proxy</em> use stage results and terrain; they are <strong>never official</strong> sprint or mountain classifications.
-          </span>
-        </div>
-      </div></details>
+      <div id="page-return" class="page-return" hidden><button type="button" id="page-return-btn" class="analysis-link">← Back</button></div>
 
       <!-- Deep-Link Validation & Safe Navigation Feedback Banner -->
       <section id="deeplink-feedback-banner" class="deeplink-banner hidden" role="status" aria-live="polite">
@@ -214,11 +210,24 @@
 
           <!-- VIEW 1: DASHBOARD (OVERVIEW + EMBEDDED BI) -->
           <section id="view-overview" class="view-section active" aria-labelledby="workspace-heading">
-<section class="race-hero season-hero" aria-label="Tour de France 2025">
-  <div class="hero-copy"><span class="hero-eyebrow">5–27 JULY 2025</span><h2>Tour de France</h2></div>
+<section class="race-hero race-poster" aria-labelledby="race-poster-title">
+  <div class="poster-edition"><span class="poster-date">5—27 July</span><span class="poster-year">2025</span></div>
+  <div class="poster-story">
+    <h2 id="race-poster-title"><span>Tour de</span><strong>France</strong></h2>
+    <p class="poster-field"><span class="poster-starters"><b data-race-value="starters">—</b> starters</span><span class="poster-teams"><b data-race-value="teams">—</b> teams</span></p>
+  </div>
+  <div class="poster-bottom" aria-label="Full race context">
+    <button type="button" id="poster-stage-link" class="poster-stages" aria-label="Open the stage directory">
+      <span class="poster-stage-number" data-race-value="stages">—</span>
+      <span class="poster-stage-caption">Stages <span aria-hidden="true">↗</span></span>
+    </button>
+    <div class="poster-distance">
+      <div class="poster-distance-number"><span data-race-value="distance">—</span><span class="poster-unit">km</span></div>
+      <span class="poster-distance-caption">Route distance</span>
+    </div>
+  </div>
   <a class="photo-credit" href="https://commons.wikimedia.org/wiki/File:Peloton_during_Simacourbe_climb_of_Tour_de_France_2024_stage_13.jpg" target="_blank" rel="noopener noreferrer">Tour 2024 · Hugo LUC · CC BY-SA 4.0</a>
 </section>
-<div id="race-kpis" class="race-kpis" aria-label="Full race context"></div>
 <article class="card podium-summary"><div class="analysis-head"><h3>Final general classification</h3><button type="button" data-open-module="rider_standings" data-final-standings="true" class="analysis-link">Full standings →</button></div><div id="overview-standings-container" aria-live="polite"></div></article>
 <article class="card stage-trend-card"><div class="analysis-head"><h3>Stage finishers</h3><button type="button" data-open-module="stage_summary" class="analysis-link">Stage directory →</button></div><p class="analysis-note trend-unit">All riders · active stage scope</p><div id="stage-trend-chart" class="stage-trend-chart" aria-live="polite"></div></article>
 <div class="explore-shortcuts"><h3>Explore</h3><button data-open-module="rider_specialisation">Terrain fit <span>↗</span></button><button data-open-module="gc_evolution">Decisive stages <span>↗</span></button><button data-open-module="time_rules">Time rules <span>↗</span></button></div>

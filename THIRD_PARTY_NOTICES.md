@@ -15,6 +15,13 @@ The [MIT License](LICENSE) applies to original project code and documentation. T
 
 The photograph is illustrative and depicts the 2024 race; the dashboard analyzes the supplied 2025 dataset. No endorsement by the photographer, riders, teams, or race organizer is implied. The previous A.S.O. photograph is not included in this public repository.
 
+## Barlow Condensed fonts
+
+- Files: `web/static/assets/fonts/BarlowCondensed-ExtraBoldItalic.ttf` and `BarlowCondensed-Medium.ttf`.
+- Copyright 2017 The Barlow Project Authors.
+- Source: [Google Fonts Barlow Condensed directory](https://github.com/google/fonts/tree/main/ofl/barlowcondensed). The font files are bundled unchanged and served locally.
+- License: SIL Open Font License 1.1; the full license is included at [`web/static/assets/fonts/OFL.txt`](web/static/assets/fonts/OFL.txt). The MIT code license does not replace the font license.
+
 ## Course dataset
 
 `data/riders.csv`, `data/individual_results.csv`, and `data/exits.csv` are the supplied course inputs. No additional rights or official completeness claims are asserted. Outputs follow these files and the documented proxy definitions. The MIT software license does not relicense third-party data.

@@ -8,3 +8,7 @@
 - The image is illustrative; analytical data is from the supplied 2025 course files.
 
 See [third-party notices](../../../THIRD_PARTY_NOTICES.md) for full attribution and license scope. The MIT code license does not replace the photograph's CC BY-SA license.
+
+## Display fonts
+
+The poster uses locally hosted Barlow Condensed (Medium and ExtraBold Italic), distributed under the SIL Open Font License 1.1. See [the bundled license](fonts/OFL.txt) and [third-party notices](../../../THIRD_PARTY_NOTICES.md) for source and attribution.

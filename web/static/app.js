@@ -489,14 +489,14 @@
     const desc = getScopeDescriptor(filters);
     const scopePill = document.getElementById("active-scope-pill");
     const basisPill = document.getElementById("active-basis-pill");
-    const titleEl = document.getElementById("scope-explanation-title");
-    const bodyEl = document.getElementById("scope-explanation-body");
     const drillBadge = document.getElementById("drill-scope-badge");
     const overviewGcTitle = document.getElementById("overview-gc-card-title");
     const overviewTeamTitle = document.getElementById("overview-team-card-title");
 
     const cohort = document.getElementById("active-cohort-label");
     if (cohort) cohort.textContent = [filters.team_keys ? `${filters.team_keys.length} team(s)` : "All teams", filters.rider_keys ? `${filters.rider_keys.length} rider(s)` : "All riders", filters.young_only ? "Young only" : null, filters.stage_types?.length ? filters.stage_types.join(" / ") : null, filters.team_aggregation === "cumulative_top3" ? "Cumulative top-3" : null, filters.rank_scope === "filtered" ? "Subgroup rank" : null].filter(Boolean).join(" · ");
+    if (scopePill) scopePill.title = desc.shortLabel;
+    if (cohort) cohort.title = cohort.textContent;
     syncClassificationDropdownLabels(desc);
     if (overviewGcTitle) overviewGcTitle.textContent = desc.mode === "final" ? "Classification leaders" : desc.mode === "as_of" ? `Leaders through Stage ${filters.as_of_stage || 21}` : "Selected-stage leaders";
     if (overviewTeamTitle) overviewTeamTitle.textContent = desc.mode === "final" ? "Team standings" : "Team standings · active scope";
@@ -511,36 +511,16 @@
       const s = filters.as_of_stage || 21;
       if (scopePill) scopePill.textContent = `Through Stage ${s} · stages 1–${s}`;
       if (drillBadge) drillBadge.textContent = `Stages 1..${s}`;
-      if (titleEl) titleEl.textContent = `Cumulative Standings Through Stage ${s}:`;
-      if (bodyEl) {
-        bodyEl.textContent =
-          `Includes riders who completed every stage from Stage 1 through Stage ${s}. ` +
-          `Riders who exited after Stage ${s} remain eligible in this historical cutoff view.`;
-      }
     } else if (filters.stage_scope === "selection") {
-      const typesDesc =
-        filters.stage_types && filters.stage_types.length
-          ? filters.stage_types.join(", ")
-          : "all terrains";
       const idsDesc =
         filters.stage_ids && filters.stage_ids.length
           ? `Stages [${filters.stage_ids.join(", ")}]`
           : "all matching stages";
       if (scopePill) scopePill.textContent = `Selected-Stage Performance (${idsDesc})`;
       if (drillBadge) drillBadge.textContent = `Custom Selection`;
-      if (titleEl) titleEl.textContent = "Selected-Stage Performance Scope (Non-Full GC):";
-      if (bodyEl) {
-        bodyEl.textContent =
-          `Aggregating ${idsDesc} across ${typesDesc}. Times and ranks reflect performance across the selected stages only and must not be labeled as full 21-stage General Classification.`;
-      }
     } else {
       if (scopePill) scopePill.textContent = "Final race · stages 1–21";
       if (drillBadge) drillBadge.textContent = "All 21 Stages";
-      if (titleEl) titleEl.textContent = "Final Full-Race Classification Scope:";
-      if (bodyEl) {
-        bodyEl.textContent =
-          "Cumulative standings require completing all 21 stages (160 of 184 starters). Exited riders retain stage results and team roster records in the drill panel but do not receive a final 21-stage GC rank.";
-      }
     }
   }
 
@@ -3478,23 +3458,24 @@
   }
 
   function renderRaceContext(meta) {
-    const box = document.getElementById("race-kpis");
-    if (!box) return;
+    const poster = document.querySelector(".race-poster");
+    if (!poster) return;
     const data = RaceAppearance.raceSummary(meta);
-    if (!data) { box.innerHTML = '<div class="kpi-card">Race context unavailable</div>'; return; }
-    document.getElementById("rail-race-context").textContent = `${data.starters} riders · ${data.stages} stages`;
-    const metrics = [
-      ["Starters", data.starters, `<b>${data.finishers} finished</b> · ${(100*data.finishers/data.starters).toFixed(1)}% completion`],
-      ["Teams", data.teams, ""],
-      ["Stages", data.stages, ""],
-      ["Route distance · km", data.distance === null ? "—" : data.distance.toLocaleString("en-GB", {maximumFractionDigits:1}), ""]
-    ];
-    box.innerHTML = metrics.map(([label,value,note]) => `<div class="kpi-card"><div class="kpi-label">${label}</div><div class="kpi-value">${value}</div><div class="kpi-note">${note}</div></div>`).join("");
-    const stageTile=box.children[2];
-    stageTile.setAttribute("role","link"); stageTile.tabIndex=0;
-    stageTile.setAttribute("aria-label","Open the stage directory");
-    stageTile.onclick=()=>goToAnalysis("stage_summary");
-    stageTile.onkeydown=event=>{if(["Enter"," "].includes(event.key)){event.preventDefault();stageTile.click();}};
+    const values = {
+      starters: data?.starters,
+      teams: data?.teams,
+      stages: data?.stages,
+      distance: data?.distance,
+    };
+    for (const [name, value] of Object.entries(values)) {
+      poster.querySelector(`[data-race-value="${name}"]`).textContent =
+        value == null ? "—" : value.toLocaleString("en-GB", {maximumFractionDigits:1});
+    }
+    poster.querySelector(".poster-starters").title = data ?
+      `${data.finishers} finished · ${(100 * data.finishers / data.starters).toFixed(1)}% completion` :
+      "Race context unavailable";
+    if (data) document.getElementById("rail-race-context").textContent = `${data.starters} riders · ${data.stages} stages`;
+    document.getElementById("poster-stage-link").onclick = () => goToAnalysis("stage_summary");
   }
 
   function openChartsForModule() {

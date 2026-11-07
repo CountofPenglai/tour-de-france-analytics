@@ -22,7 +22,6 @@
 .explore-shortcuts button,.analysis-tabs button,.analysis-segment button,.analysis-toolbar button {background:#fff;color:#1d3d49;border:1px solid #d5dfe4;padding:8px 12px;border-radius:7px;cursor:pointer;font:600 13px/1.35 var(--font-sans)}
 .explore-shortcuts button span {margin-left:12px}
 .bi-disclosure summary {cursor:pointer;color:#415668;font-weight:650;padding:10px 0}
-#race-kpis [role=link] {cursor:pointer}
 .rail-item:focus-visible,.analysis-page :focus-visible,.finish-rider:focus-visible,[role=link]:focus-visible {outline:3px solid #18827c;outline-offset:2px}
 .approved-layout.explorer-card {display:block;background:transparent;border:0;box-shadow:none;overflow:visible;padding:0}
 .approved-layout > .module-subtoolbar,.approved-layout > .analysis-view-toolbar,.approved-layout > #explore-table-container,.approved-layout > #insight-story {display:none!important}
@@ -61,3 +60,119 @@
 .stage-trend-chart svg {width:100%;max-height:190px}
 
 .drill-entry-scope{font-size:13px;font-weight:650;color:#27565c;overflow-wrap:anywhere}
+
+
+/* Locally hosted display type from Google Fonts, licensed under the SIL OFL. */
+@font-face {
+  font-family:"Barlow Condensed";
+  src:url("/static/assets/fonts/BarlowCondensed-ExtraBoldItalic.ttf") format("truetype");
+  font-weight:800;
+  font-style:italic;
+  font-display:swap;
+}
+@font-face {
+  font-family:"Barlow Condensed";
+  src:url("/static/assets/fonts/BarlowCondensed-Medium.ttf") format("truetype");
+  font-weight:500;
+  font-style:normal;
+  font-display:swap;
+}
+
+/* An editorial composition with a title, a field line and two large race figures. */
+.race-poster {
+  --poster-type:"Barlow Condensed", "Arial Narrow", sans-serif;
+  container-type:inline-size;
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  min-height:510px;
+  padding:28px 44px 44px;
+  border:0;
+  border-radius:6px;
+  background-color:#092637;
+  background-position:center 85%;
+  color:#fffdf3;
+}
+.race-poster::before {
+  background:
+    linear-gradient(90deg,rgba(5,25,38,.85),rgba(5,25,38,.48) 37%,rgba(5,25,38,.03) 74%),
+    linear-gradient(0deg,rgba(5,22,32,.93),rgba(5,22,32,.46) 25%,rgba(5,22,32,0) 62%,rgba(5,22,32,.12));
+}
+.poster-edition {display:flex;align-items:center;justify-content:space-between;gap:20px}
+.poster-date {font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#e2ebef}
+.poster-year {font:500 34px/.95 var(--poster-type);letter-spacing:1px;color:#ffdf32}
+.poster-story {width:fit-content;max-width:100%;margin-top:17px}
+#race-poster-title {margin:0;text-transform:uppercase;color:#fffdf3;font-family:var(--poster-type);font-weight:800;font-style:italic;line-height:.79;letter-spacing:-1px}
+#race-poster-title span {display:block;font-size:clamp(48px,5.2cqw,64px);margin-left:2px}
+#race-poster-title strong {display:block;font:inherit;font-size:clamp(110px,14.4cqw,176px);letter-spacing:-2.5px;margin-top:8px;padding-right:12px}
+.poster-field {display:flex;align-items:baseline;gap:24px;margin:20px 0 0 5px;color:#e6edf0;font-size:13px;letter-spacing:.25px}
+.poster-field b {font:500 31px/1 var(--poster-type);color:#ffdf32;margin-right:5px;letter-spacing:0}
+.poster-bottom {display:flex;justify-content:space-between;align-items:flex-end;gap:30px;margin-top:auto;padding-top:17px}
+.poster-stages {display:flex;align-items:flex-end;gap:15px;min-width:0;padding:0;border:0;border-radius:0;background:none;color:#fffdf3;cursor:pointer;text-align:left}
+.poster-stage-number {font:500 clamp(72px,8.2cqw,100px)/.78 var(--poster-type);letter-spacing:-1.5px}
+.poster-stage-caption {display:flex;flex-direction:column-reverse;gap:11px;padding-bottom:2px;font-size:11px;font-weight:650;letter-spacing:2px;text-transform:uppercase}
+.poster-stage-caption > span {color:#ffdf32;font-size:22px;line-height:1;letter-spacing:0}
+.poster-stages:hover .poster-stage-number {color:#ffdf32}
+.poster-stages:focus-visible {outline:2px solid #ffdf32;outline-offset:9px}
+.poster-distance {text-align:right;min-width:0}
+.poster-distance-number {display:flex;justify-content:flex-end;align-items:baseline;gap:12px;color:#ffdf32;font:500 clamp(94px,11.5cqw,140px)/.82 var(--poster-type);letter-spacing:-3px;white-space:nowrap}
+.poster-unit {font:500 30px/1 var(--poster-type);letter-spacing:0;color:#fffdf3}
+.poster-distance-caption {display:block;margin-top:13px;font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#e2ebef}
+.race-poster .photo-credit {bottom:13px;right:22px;max-width:calc(100% - 44px);background:none;padding:0;border-radius:0;font-size:8px;color:#b9c8d0;line-height:1.4}
+@media(max-width:1100px) {
+  .race-poster {min-height:460px;padding:26px 32px 40px}
+  .poster-story {margin-top:18px}
+  .poster-field {gap:18px;font-size:12px}
+}
+@media(max-width:700px) {
+  .race-poster {padding:24px;min-height:500px}
+  #race-poster-title strong {font-size:110px}
+  .poster-bottom {flex-wrap:wrap;gap:26px}
+  .poster-distance {margin-left:auto}
+}
+
+
+/* One compact toolbar for the page title, active scope and filter entry. */
+.compact-topbar {
+  display:flex;
+  flex-wrap:nowrap;
+  align-items:center;
+  gap:24px;
+  min-height:54px;
+  margin:0 0 6px;
+  padding:0 0 13px;
+  border-bottom:1px solid #dfe6eb;
+}
+.compact-topbar .workspace-heading {font-size:24px;line-height:1.2;letter-spacing:-.65px;margin:0}
+.compact-topbar .topbar-title-block {flex:1;min-width:150px}
+.compact-topbar .topbar-actions {display:flex;align-items:center;flex-wrap:nowrap;gap:18px;min-width:0}
+.scope-control {
+  display:flex;align-items:center;gap:18px;min-width:0;max-width:570px;
+  padding:5px 5px 5px 13px;border:1px solid #d9e2e8;border-radius:8px;
+  background:#edf2f5;color:#2e4758;text-align:left;font-family:var(--font-sans);cursor:pointer;
+}
+.scope-summary {display:flex;flex-direction:column;gap:3px;min-width:0}
+.scope-range {font-size:11px;line-height:1.4;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scope-detail {display:flex;align-items:center;gap:8px;min-width:0;font-size:10px;line-height:1.4;color:#607281;font-weight:450}
+#active-basis-pill {flex-shrink:0}
+#active-cohort-label {min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#active-cohort-label:not(:empty)::before {content:"·";margin-right:8px;color:#8d9da8}
+.scope-action {display:inline-flex;align-items:center;gap:8px;flex-shrink:0;align-self:stretch;padding:0 12px;border-radius:5px;background:#234b5d;color:#fff;font-size:11px;font-weight:650}
+.scope-action svg {flex-shrink:0}
+.scope-control:hover {border-color:#9fb5c3;background:#e8eff3}
+.scope-control:hover .scope-action {background:#173c4e}
+.scope-control:focus-visible {outline:2px solid #2b7781;outline-offset:3px}
+.compact-topbar .topbar-link {display:inline-flex;align-items:center;padding:8px 0;border:0;border-radius:0;background:none;color:#657985;font-size:11px;font-weight:550}
+.compact-topbar .topbar-link:hover {color:#1c4d60;text-decoration:underline;text-underline-offset:4px;background:none}
+.compact-topbar .topbar-link:focus-visible {outline:2px solid #2b7781;outline-offset:3px}
+@media(max-width:1100px) {
+  .compact-topbar {gap:16px}
+  .compact-topbar .workspace-heading {font-size:22px}
+  .compact-topbar .topbar-actions {gap:12px;max-width:70%}
+  .scope-control {gap:12px;max-width:430px}
+}
+@media(max-width:700px) {
+  .compact-topbar {flex-wrap:wrap;gap:12px}
+  .compact-topbar .topbar-actions {width:100%;max-width:100%}
+  .scope-control {flex:1;max-width:none}
+}
