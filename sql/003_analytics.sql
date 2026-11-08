@@ -311,7 +311,7 @@ $$;
 -- dw.fact_participation + dw.dim_rider (combined AND for the same member) and
 -- NEVER remove contributors from team timing calculations.
 -- -----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION dw.team_standings(p_filters jsonb DEFAULT '{}'::jsonb)
+CREATE OR REPLACE FUNCTION dw.team_standings_detail(p_filters jsonb, include_scoring boolean)
 RETURNS TABLE (
     team_key integer,
     team_name text,
@@ -321,7 +321,8 @@ RETURNS TABLE (
     stage_count integer,
     contributor_count integer,
     team_aggregation text,
-    time_basis text
+    time_basis text,
+    scoring jsonb
 )
 LANGUAGE plpgsql
 STABLE
@@ -449,6 +450,7 @@ BEGIN
             fr.team_key,
             fr.rider_key,
             fr.stage_key,
+            fr.finish_rank,
             CASE WHEN v_time_basis = 'finish'
                  THEN fr.finish_time_seconds
                  ELSE fr.adjusted_time_seconds
@@ -479,6 +481,7 @@ BEGIN
             fr.stage_key,
             fr.rider_key,
             fr.stage_seconds,
+            fr.finish_rank,
             ROW_NUMBER() OVER (
                 PARTITION BY fr.team_key, fr.stage_key
                 ORDER BY fr.stage_seconds ASC, fr.rider_key ASC
@@ -533,6 +536,26 @@ BEGIN
         GROUP BY cr.team_key
         HAVING COUNT(*) = 3
     ),
+    scoring_rows AS (
+        SELECT sr.team_key, sr.stage_key, sr.rider_key, sr.finish_rank, sr.stage_seconds, sr.rn
+        FROM stage_ranked sr
+        WHERE include_scoring AND sr.stage_team_finishers >= 3 AND sr.rn <= 3
+        UNION ALL
+        SELECT fr.team_key, fr.stage_key, fr.rider_key, fr.finish_rank, fr.stage_seconds, cr.rn
+        FROM cumulative_ranked cr
+        JOIN scoped_results fr USING (team_key, rider_key)
+        WHERE include_scoring AND cr.rn <= 3
+    ),
+    scoring_by_team AS (
+        SELECT sr.team_key, jsonb_agg(jsonb_build_object(
+            'stage_id', ds.stage_id, 'rider_key', sr.rider_key, 'rider_name', dr.rider_name,
+            'finish_rank', sr.finish_rank, 'scoring_seconds', sr.stage_seconds, 'scoring_order', sr.rn
+        ) ORDER BY ds.stage_order, sr.rn) AS rows
+        FROM scoring_rows sr
+        JOIN dw.dim_stage ds USING (stage_key)
+        JOIN dw.dim_rider dr USING (rider_key)
+        GROUP BY sr.team_key
+    ),
     combined_teams AS (
         SELECT s.team_key, s.total_seconds, s.stage_count, s.contributor_count
         FROM stage_top3_teams s
@@ -572,11 +595,25 @@ BEGIN
         rt.stage_count::integer,
         rt.contributor_count::integer,
         v_team_aggregation::text AS team_aggregation,
-        v_time_basis::text AS time_basis
+        v_time_basis::text AS time_basis,
+        sb.rows AS scoring
     FROM ranked_teams rt
     JOIN matching_teams mt ON mt.team_key = rt.team_key
+    LEFT JOIN scoring_by_team sb ON sb.team_key = rt.team_key
     ORDER BY rt.rk ASC, rt.total_seconds ASC, rt.team_key ASC;
 END;
+$$;
+
+CREATE OR REPLACE FUNCTION dw.team_standings(p_filters jsonb DEFAULT '{}'::jsonb)
+RETURNS TABLE (
+    team_key integer, team_name text, total_seconds integer, rank integer, gap_seconds integer,
+    stage_count integer, contributor_count integer, team_aggregation text, time_basis text
+)
+LANGUAGE sql STABLE SECURITY INVOKER SET search_path = dw, pg_catalog AS $$
+    SELECT t.team_key, t.team_name, t.total_seconds, t.rank, t.gap_seconds,
+           t.stage_count, t.contributor_count, t.team_aggregation, t.time_basis
+    FROM dw.team_standings_detail(p_filters, false) t
+    ORDER BY t.rank, t.total_seconds, t.team_key
 $$;
 
 -- -----------------------------------------------------------------------------
@@ -1700,6 +1737,7 @@ BEGIN
         GRANT SELECT ON TABLE dw.olap_rollup, dw.stage_winner_reference TO tdf_reader;
         GRANT EXECUTE ON FUNCTION dw.rider_standings(jsonb) TO tdf_reader;
         GRANT EXECUTE ON FUNCTION dw.team_standings(jsonb) TO tdf_reader;
+        GRANT EXECUTE ON FUNCTION dw.team_standings_detail(jsonb, boolean) TO tdf_reader;
         GRANT EXECUTE ON FUNCTION dw.rider_stage_results(jsonb) TO tdf_reader;
         GRANT EXECUTE ON FUNCTION dw.stage_summary(jsonb) TO tdf_reader;
         GRANT EXECUTE ON FUNCTION dw.country_participation(jsonb) TO tdf_reader;

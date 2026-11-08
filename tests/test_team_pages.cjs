@@ -31,11 +31,29 @@ test('team depth opens its full roster including zero contributions and narrows 
   assert.ok(element.innerHTML.indexOf('Top-10 riders') < element.innerHTML.indexOf('Team Standings'));
   assert.match(element.innerHTML,/Zero &lt;Exit&gt;/);
   click('contributors',1);
-  assert.doesNotMatch(element.innerHTML.split('Top-10 finishes by terrain')[0],/Zero &lt;Exit&gt;/);
+  assert.doesNotMatch(element.innerHTML,/Zero &lt;Exit&gt;/);
   click('roster',1);
   click('top-days',11);
   assert.deepEqual(drills[0].path,[1,11]);
   assert.equal(drills[0].metric,'top10');
+});
+
+test('team presentation leads with comparison and standings before the contribution matrix', async () => {
+  const teams = ['UAE Team Emirates','Visma','Red Bull'].map((team_name,i) => ({
+    team_key:i+1,team_name,participants:8,top10_distinct_riders:5,
+    top10_finishes:20,top10_stages:15,selected_stage_count:21,wins:5
+  }));
+  const {ctx,element} = fixture({
+    team_depth:teams,
+    team_standings:teams.map((team,i) => ({...team,rank:i+1,total_seconds:836696+i}))
+  });
+  await window.RacePages.team_standings(ctx);
+  const html = element.innerHTML;
+  assert.doesNotMatch(html,/Riders and teams sections|Compare team standings/);
+  assert.match(html,/tt-compare-action/);
+  assert.match(html,/Top-10 stage coverage/);
+  assert.match(html,/aria-label="Team rank comparison"/);
+  assert.ok(html.indexOf('id="tt-standings"') < html.indexOf('id="tt-contributions"'));
 });
 
 test('mountain podiums, denominator and mean gap use their own evidence rows and keep the stage cutoff', async() => {
@@ -63,6 +81,42 @@ test('empty and superseded requests do not resurrect a previous roster', async()
   assert.equal(element.innerHTML,'Other page');
 });
 
+test('stage matrix preserves missing results and scoring links keep the selected method and scope', async () => {
+  const team = {team_key:1,team_name:'Red Bull',participants:2,top10_distinct_riders:1,top10_finishes:1,
+    top10_stages:1,selected_stage_count:2,wins:0,rank:2,total_seconds:100,contributor_count:1};
+  const {ctx,element,click,drills} = fixture({
+    team_depth:[team],team_standings:[team],
+    team_roster_performance:[{...team,rider_key:11,rider_name:'Lipowitz',top10_count:1}],
+    rider_stage_results:[{rider_key:11,rider_name:'Lipowitz',stage_id:11,finish_rank:3,adjusted_time_seconds:100}],
+    team_scoring:[{...team,scoring:[{rider_key:11,rider_name:'Lipowitz',stage_id:11,finish_rank:3,scoring_seconds:100,scoring_order:1}]}]
+  });
+  const original = ctx.report;
+  let requested;
+  ctx.report = (name,filters) => {
+    if (name==='team_scoring') requested=filters;
+    return original(name,filters);
+  };
+  await window.RacePages.team_standings(ctx);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.doesNotMatch(element.innerHTML,/Open stage matrix/);
+  assert.match(element.innerHTML,/tt-matrix-missing/);
+  assert.match(element.innerHTML,/tt-matrix-top/);
+  click('matrix-ride','11:11');
+  click('matrix-drill','11:11');
+  assert.deepEqual(drills[0].filters.stage_ids,[11]);
+  click('scoring-cumulative_top3',1);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(requested.team_aggregation,'cumulative_top3');
+  assert.equal(requested.as_of_stage,12);
+  assert.match(element.innerHTML,/tt-counted">Counted/);
+  assert.match(element.innerHTML,/0:01:40 total/);
+  element.onchange({type:'change',target:{closest:()=>({dataset:{act:'contribution-view'},value:'burden'})}});
+  assert.match(element.innerHTML,/value="burden" selected/);
+  assert.match(element.innerHTML,/Rider Time Contributions · Red Bull/);
+  assert.doesNotMatch(element.innerHTML,/Combined Time by Team/);
+  assert.doesNotMatch(element.innerHTML,/Scoring Riders · Red Bull/);
+});
+
 test('terrain evidence preserves an explicit empty stage scope instead of widening it', async() => {
   const cells = [{entity_kind:'rider',entity_name:'Rider',entity_key:11,team_key:2,team_name:'Test',stage_type:'mountain',
     speed_kmh:35,sample_count:1,podium_count:0,mean_winner_gap_seconds:20}];
@@ -80,6 +134,7 @@ test('a late daily-time response cannot replace the currently selected team deta
   const orig=ctx.analytics, pending=new Map();
   ctx.analytics=(name,filters)=>name==='rider_stage_results' ? new Promise(resolve=>pending.set(filters.team_keys[0],resolve)) : orig(name,filters);
   await window.RacePages.team_standings(ctx);
+  element.onchange({type:'change',target:{closest:()=>({dataset:{act:'contribution-view'},value:'burden'})}});
   click('burden-team',1);
   click('burden-rider',10);
   click('burden-team',2);

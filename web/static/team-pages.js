@@ -45,18 +45,18 @@
       if (!ctx.isCurrent()) return;
       const target = event.target.closest('[data-act]');
       if (!target || !ctx.element.contains(target)) return;
-      if (event.type === 'click' && target.tagName === 'SELECT') return;
+      if (event.type === 'click' && ['SELECT','INPUT'].includes(target.tagName)) return;
       handler(target.dataset, target.value);
     };
     ctx.element.onclick = dispatch;
     ctx.element.onchange = dispatch;
   }
-  function paint(ctx, html) {
+  function paint(ctx, html, teamPage=false) {
     if (!ctx.isCurrent()) return;
     const el = ctx.element, focused = el.ownerDocument?.activeElement;
     const oldFocus = focused && el.contains(focused) ? focused.dataset : null;
     const oldScroll = Array.from(el.querySelectorAll?.('[data-scroll]') || [], n => [n.dataset.scroll,n.scrollTop]);
-    el.innerHTML = '<div class="analysis-page tt-page">' + html + '</div>';
+    el.innerHTML = '<div class="analysis-page tt-page' + (teamPage ? ' tt-team-page' : '') + '">' + html + '</div>';
     for (const [key,top] of oldScroll) {
       const list = el.querySelector('[data-scroll="' + key + '"]');
       if (list) list.scrollTop = top;
@@ -67,40 +67,77 @@
       match?.focus({preventScroll:true});
     }
   }
-  const jump = (ctx,id) => ctx.element.querySelector('#tt-' + id)?.scrollIntoView({block:'start',behavior:'instant'});
+  function jump(ctx,id) {
+    const target = ctx.element.querySelector('#tt-' + id);
+    if (!target) return;
+    target.scrollIntoView({block:'start',behavior:'instant'});
+    const heading = target.querySelector('h3,h4');
+    heading?.setAttribute('tabindex','-1');
+    heading?.focus({preventScroll:true});
+  }
   const teamDrill = (ctx, team, rider, metric, label, filters={}) =>
     ctx.drill({dimension:'team',path:rider == null?[team]:[team,rider],metric,label,filters});
 
-  function depthChart(teams, prefs) {
-    const field = {appearances:'top10_finishes',roster:'participants'}[prefs.depthSort] || 'top10_distinct_riders';
-    const ordered = [...teams].sort((a,b) => b[field] - a[field] || b.top10_distinct_riders - a.top10_distinct_riders ||
-      b.top10_finishes - a.top10_finishes || byName(a.team_name,b.team_name));
-    const largest = Math.max(...teams.map(t=>t.participants),1);
-    const lines = ordered.map(t => {
-      const title = esc(t.team_name), id = t.team_key;
-      const a = 100 * t.participants / largest, b = 100 * t.top10_distinct_riders / (t.participants || 1);
-      const edges = '<div class="tt-barhouse" style="width:' + a + '%">' +
-        btn('roster',id,'','aria-label="Starting roster for ' + title + '" title="Starting roster"','tt-roster-bar') +
-        (b > 0 ? btn('contributors',id,'','aria-label="Top-10 contributors for ' + title + '" title="Top-10 contributors" style="width:' + b + '%"','tt-contributor-bar') : '') + '</div>';
-      return '<div class="tt-depth-row">' + btn('roster',id,title,'','tt-team-name') + '<div class="tt-mark">' + edges + '</div>' +
-        '<span class="tt-count">' + btn('contributors',id,num(t.top10_distinct_riders),'title="Top-10 contributors"') + ' / ' +
-        btn('roster',id,num(t.participants),'title="Starting roster"') + '</span>' +
-        btn('terrain',id,num(t.top10_finishes),'aria-label="' + num(t.top10_finishes) + ' top-10 finishes by stage type for ' + title + '"','tt-finishes') + '</div>';
-    }).join('');
-    return '<div class="tt-legend"><span><i></i>Top-10 riders</span><span><i></i>Starters</span></div>' +
-      '<div class="tt-depth-header"><span>Team</span><span>Top-10 / starters</span><span>Top-10 finishes</span></div>' +
-      '<div class="tt-depth-list" data-scroll="depth" tabindex="0" aria-label="All team depth comparisons">' + lines + '</div>';
-  }
+  const icons = {
+    trophy:'M8 4h8v6a4 4 0 0 1-8 0V4ZM8 6H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 2v5m-4 1h8',
+    route:'M4 17l8-10 8 10M4 17h.01M12 7h.01M20 17h.01',
+    riders:'M3 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2m2-6a4 4 0 0 1 4 4v2M12 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm4-3a3 3 0 0 1 0 6',
+    timer:'M12 8v5l3 2M9 2h6m-3 2v2m6 1 2-2m0 9a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z',
+    flat:'M3 16h18', hilly:'M3 17q4-10 8-4t10-3', mountain:'M3 19 12 5l9 14M9 10l3 3 3-3',
+    arrow:'M5 12h14m-6-6 6 6-6 6'
+  };
+  const icon = name => '<svg class="tt-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="' + icons[name] + '"/></svg>';
+  const evidence = (act,key,label,name) => btn(act,key,label+icon('arrow'),'aria-label="'+esc(name)+'"','analysis-link tt-evidence');
+  const slot = (team,a,b) => team===a ? 'a' : team===b ? 'b' : 'neutral';
 
   function comparison(teams, a, b) {
-    const metric = (name,format) => '<tr><th scope="row">' + name + '</th><td>' + format(a) +
-      '</td>' + (b ? '<td>' + format(b) + '</td>' : '') + '</tr>';
-    const panel = '<table class="tt-compare"><thead><tr><th></th><th scope="col">A</th>' + (b?'<th scope="col">B</th>':'') +
-      '</tr></thead><tbody>' + metric('Stage wins',t=>btn('wins',t.team_key,num(t.wins))) +
-      metric('Stages with a top 10',t=>num(t.top10_stages)+' / '+num(t.selected_stage_count)) + '</tbody></table>';
-    return '<aside class="tt-compare-box"><h4>Wins and Coverage</h4>' +
-      select('compare-a','Team A',teamChoices(teams),a.team_key) +
-      (b?select('compare-b','Team B',teamChoices(teams.filter(t=>t!==a)),b.team_key):'') + panel + '</aside>';
+    const selected = b ? [a,b] : [a];
+    const metrics = [
+      ['Stage wins','trophy','wins',null,'wins'],
+      ['Top-10 stage coverage','route','top10_stages','selected_stage_count','coverage'],
+      ['Riders with a top-10 finish','riders','top10_distinct_riders','participants','contributors']
+    ];
+    return '<div class="tt-broadcast"><div class="tt-pair-controls">' +
+      selected.map((t,i) => '<div class="tt-slot-'+slot(t,a,b)+'"><strong><i class="tt-swatch"></i>'+esc(t.team_name)+'</strong>'+
+        select(i?'compare-b':'compare-a',i?'Team B':'Team A',teamChoices(teams),t.team_key)+'</div>').join('') +
+      '</div>'+metrics.map(([label,symbol,field,denom,action]) => {
+        const max = Math.max(1,...selected.map(t=>Number(t[field])));
+        return '<div class="tt-broadcast-metric"><h4>'+icon(symbol)+esc(label)+'</h4><div class="tt-pair-values">'+
+          selected.map(t => {
+            const base = denom ? t[denom] : max;
+            const value = base ? num(t[field]) + (denom ? ' / '+num(base) : '') : '—';
+            const display = base && t[field]>0 ? evidence(action,t.team_key,value,t.team_name+' · '+label+' · '+value) : value;
+            return '<div class="tt-slot-'+slot(t,a,b)+'"><strong>'+display+'</strong>'+
+              bar(t[field],base)+'</div>';
+      }).join('')+'</div></div>';
+      }).join('')+note('Select a number marked → to see the results behind it.')+'</div>';
+  }
+
+  function performanceTable(teams,prefs) {
+    const columns = [
+      ['team_name','Team'],['wins','Stage wins'],['coverage','Top-10 stage coverage'],
+      ['top10_finishes','Top-10 finishes'],['top10_distinct_riders','Top-10 riders'],['participants','Starters']
+    ];
+    const field = prefs.teamSort || 'coverage';
+    const direction = prefs.teamAscending ? 1 : -1;
+    const value = t => field==='coverage' ? (t.top10_stages / (t.selected_stage_count || 1)) : t[field];
+    const rows = teams.filter(t=>t.team_name.toLowerCase().includes((prefs.teamSearch || '').toLowerCase()))
+      .sort((a,b)=>(field==='team_name' ? direction*byName(a.team_name,b.team_name) :
+        direction*(value(a)-value(b)) || byName(a.team_name,b.team_name)));
+    const ratio = (v,d) => d ? num(v)+' / '+num(d) : '—';
+    return '<details class="tt-all-teams"'+(prefs.teamsOpen?' open':'')+'><summary>All teams · '+num(teams.length)+'</summary>'+
+      '<label class="tt-control">Find team <input type="search" data-act="team-search" value="'+esc(prefs.teamSearch || '')+'"></label>'+
+      '<div class="analysis-table-wrap tt-scroll"><table class="analysis-table"><thead><tr>'+
+      columns.map(([key,label])=>'<th scope="col"'+(key===field?' aria-sort="'+(direction===1?'ascending':'descending')+'"':'')+'>'+
+        btn('team-sort',key,esc(label))+'</th>').join('')+'</tr></thead><tbody>'+
+      rows.map(t=>'<tr>'+[
+        btn('matrix-team',t.team_key,esc(t.team_name))+' '+btn('add-compare',t.team_key,'Compare',
+          'aria-label="'+esc('Compare '+t.team_name)+'"','analysis-link tt-compare-action'),
+        num(t.wins),ratio(t.top10_stages,t.selected_stage_count),
+        t.top10_finishes ? evidence('terrain',t.team_key,num(t.top10_finishes),'View top-10 finishes for '+t.team_name) : '0',
+        ratio(t.top10_distinct_riders,t.participants),num(t.participants)
+      ].map(x=>'<td>'+x+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>'+
+      (rows.length ? '' : empty('No matching teams.'))+'</details>';
   }
 
   function rosterBlock(roster, target, prefs) {
@@ -110,15 +147,56 @@
     const max = riders[0]?.top10_count || 1;
     const modes = [['roster','Starting roster'],['contributors','Top-10 contributors'],['all','All riders']];
     const allTeams = prefs.rosterMode === 'all';
+    if (allTeams) riders = riders.filter(r=>[r.rider_name,r.team_name,r.rider_country_name]
+      .some(value=>String(value).toLowerCase().includes((prefs.riderSearch || '').toLowerCase())));
+    if (allTeams && prefs.riderSort==='name') riders.sort((a,b)=>byName(a.rider_name,b.rider_name));
+    if (allTeams && prefs.riderSort==='wins') riders.sort((a,b)=>b.win_count-a.win_count);
     const title = modes.find(([key]) => key === prefs.rosterMode)[1];
     return block('roster', heading(title,select('roster-mode','Show',modes,prefs.rosterMode)) +
+      (allTeams ? '<label class="tt-control">Find rider <input type="search" data-act="rider-search" value="'+esc(prefs.riderSearch || '')+'"></label> '+
+        select('rider-sort','Order',[['top10','Top-10 finishes'],['wins','Stage wins'],['name','Rider name']],prefs.riderSort || 'top10') : '')+
       (allTeams ? '' : note(target.team_name)) +
       (riders.length ? table(['Rider','Nationality',...(allTeams ? ['Team'] : []),'Top-10 finishes','Wins','Stages completed'],riders.map(r=>[
         esc(r.rider_name) + (r.exit_flag?'<small class="tt-status">Exited</small>':''),
         esc(r.rider_country_name),...(allTeams ? [esc(r.team_name)] : []), '<span class="tt-bar-value">' + bar(r.top10_count,max) +
-        btn('top-days',r.rider_key,num(r.top10_count),'aria-label="Top-10 days for ' + esc(r.rider_name) + '"') + '</span>',
+        (r.top10_count ? evidence('top-days',r.rider_key,num(r.top10_count),'Top-10 days for '+r.rider_name) : '0') + '</span>',
         num(r.win_count),num(r.completed_stage_count)
       ]),true) : empty('No top-10 finishes in this scope.')));
+  }
+
+  function stageMatrix(ctx,team,roster,rows,prefs,failed) {
+    const stages = stageScope(ctx).slice().sort((a,b)=>a.stage_order-b.stage_order);
+    const selected = roster.filter(r=>r.team_key===team.team_key);
+    if (!rows) return note(failed ? 'Stage results could not load. Choose Retry to try again.' : 'Loading stage results…')+
+      (failed ? btn('matrix-team',team.team_key,'Retry') : '');
+    if (!stages.length || !selected.length) return empty('No matching riders or stages.');
+    const byRide = new Map(rows.map(r=>[r.rider_key+':'+r.stage_id,r]));
+    const ride = byRide.get(prefs.matrixRide);
+    const show = r=>[esc(r.rider_name),num(r.finish_rank),time(r.adjusted_time_seconds),time(r.finish_time_seconds)];
+    const coverage = prefs.coverage ? '<div class="tt-coverage"><h4>Top-10 stage coverage · '+esc(team.team_name)+'</h4>'+
+      stages.map(s=>{
+        const top = rows.filter(r=>r.stage_id===s.stage_id && r.finish_rank<=10);
+        return top.length ? '<details><summary>Stage '+s.stage_id+' · '+top.length+' top-10 '+(top.length===1?'finish':'finishes')+'</summary>'+
+          table(['Rider','Rank','Adjusted time','Raw time'],top.map(show))+'</details>' : '';
+      }).join('')+'</div>' : '';
+    return coverage+'<div class="tt-matrix-wrap" data-scroll="matrix" tabindex="0" aria-label="Rider results by stage"><table class="tt-matrix"><thead><tr><th scope="col">Rider</th>'+
+      stages.map(s=>'<th scope="col" title="'+esc(terrainLabel[s.stage_type])+'">'+
+        icon(s.stage_type==='individual time-trial'?'timer':s.stage_type)+'<span aria-label="'+esc('Stage '+s.stage_id+' '+terrainLabel[s.stage_type])+'">S'+s.stage_id+'</span></th>').join('')+
+      '</tr></thead><tbody>'+selected.map(r=>'<tr><th scope="row">'+esc(r.rider_name)+'</th>'+
+        stages.map(s=>{
+          const key = r.rider_key+':'+s.stage_id;
+          const result = byRide.get(key);
+          return result ? '<td>'+btn('matrix-ride',key,num(result.finish_rank),
+            'aria-label="'+esc(r.rider_name+', Stage '+s.stage_id+', rank '+result.finish_rank)+'"',
+            result.finish_rank<=10?'tt-matrix-top':'tt-matrix-finish')+'</td>' : '<td class="tt-matrix-missing">—</td>';
+        }).join('')+'</tr>').join('')+'</tbody></table></div>'+
+      note('Highlighted · Top ten  /  Number · Completed  /  — · No result')+
+      '<div class="tt-stage-legend">'+types.map(type=>'<span>'+icon(type==='individual time-trial'?'timer':type)+esc(terrainLabel[type])+'</span>').join('')+'</div>'+
+      (ride ? '<div id="tt-matrix-evidence"><h4>Stage '+ride.stage_id+' · '+esc(ride.rider_name)+'</h4>'+
+        table(['Rider','Rank','Adjusted time','Raw time'],[show(ride)])+
+        btn('matrix-drill',prefs.matrixRide,'Open in Drill Down '+icon('arrow'))+
+        '<details><summary>Same-stage teammates in this view</summary>'+
+        table(['Rider','Rank','Adjusted time','Raw time'],rows.filter(r=>r.stage_id===ride.stage_id).map(show))+'</details></div>' : '');
   }
   function terrainBreakdown(ctx, roster, team) {
     const members = roster.filter(r=>r.team_key===team.team_key);
@@ -130,7 +208,7 @@
           num(stageScope(ctx,t).length) + ' stages</small>', 'data-terrain="' + esc(t) + '"','tt-break-row')).join('') + '</div>');
   }
 
-  function burdenBlock(teams, roster, prefs, detailRows, detailError) {
+  function burdenSummary(teams, roster, prefs) {
     const totals = teams.map(t=>{
       const members = roster.filter(r=>r.team_key===t.team_key);
       return {...t, members, seconds:members.reduce((v,r)=>v+Number(r.rider_burden_seconds),0),
@@ -139,17 +217,25 @@
     const factor = prefs.burdenSort === 'least' ? 1 : -1;
     totals.sort((a,b)=> prefs.burdenSort==='results' ? b.results-a.results || b.seconds-a.seconds :
       factor * (a.seconds-b.seconds) || byName(a.team_name,b.team_name));
-    const chosen = byKey(totals,'team_key',prefs.burdenTeam);
     const summary = table(['Team','Adjusted time','Completed results'],totals.map(t=>[
       btn('burden-team',t.team_key,esc(t.team_name)),time(t.seconds),num(t.results)]),true);
+    return block('burden',heading('Combined Time by Team',select('burden-sort','Order',
+      [['most','Most time'],['least','Least time'],['results','Completed results']],prefs.burdenSort)) +
+      note('Adds the adjusted time of every completed ride in the selected stages, including rides before a withdrawal. Fewer completed rides can mean a lower total.') +
+      note('Select a team to see how its total is split across riders.') + summary);
+  }
+
+  function riderTimeBlock(team, roster, prefs, detailRows, detailError) {
+    const members = roster.filter(r=>r.team_key===team.team_key);
+    const total = members.reduce((sum,r)=>sum+Number(r.rider_burden_seconds),0);
     let details = '';
-    if (chosen) {
-      const max = Math.max(1,...chosen.members.map(r=>r.rider_burden_seconds));
-      details = '<h4>' + esc(chosen.team_name) + '</h4>' + table(['Rider','Adjusted time','Share of team','Stages'],[...chosen.members]
+    if (members.length) {
+      const max = Math.max(1,...members.map(r=>r.rider_burden_seconds));
+      details = table(['Rider','Adjusted time','Share of team','Stages'],[...members]
         .sort((a,b)=>b.rider_burden_seconds-a.rider_burden_seconds).map(r=>[
           btn('burden-rider',r.rider_key,esc(r.rider_name)), '<span class="tt-bar-value">'+bar(r.rider_burden_seconds,max)+time(r.rider_burden_seconds)+'</span>',
-          chosen.seconds ? num(100*r.rider_burden_seconds/chosen.seconds,1)+'%' : '—',num(r.completed_stage_count)]));
-      const rider = byKey(chosen.members,'rider_key',prefs.burdenRider);
+          total ? num(100*r.rider_burden_seconds/total,1)+'%' : '—',num(r.completed_stage_count)]));
+      const rider = byKey(members,'rider_key',prefs.burdenRider);
       if (rider) {
         const days = detailRows?.filter(r=>r.rider_key===rider.rider_key);
         details += '<h4 id="tt-daily">' + esc(rider.rider_name) + ' · daily adjusted time</h4>' + (detailError ? empty('Daily results unavailable. Select a rider to retry.') : days == null ? note('Loading daily results…') : days.length ?
@@ -161,28 +247,86 @@
           detailRows.filter(r=>r.stage_id===day.stage_id).map(r=>[esc(r.rider_name),num(r.finish_rank),time(r.adjusted_time_seconds)]));
       }
     }
-    return block('burden',heading('Whole-Team Time Burden',select('burden-sort','Order',
-      [['most','Most time'],['least','Least time'],['results','Completed results']],prefs.burdenSort)) +
-      note('Adjusted time adds every completed rider-stage, including days ridden before an exit.') + summary +
-      (details?'<div id="tt-burden-detail">'+details+'</div>':''));
+    return block('rider-time',heading('Rider Time Contributions · '+team.team_name)+
+      (details ? note('Combined adjusted time · '+time(total)+' · Shares use all completed rides in this team view.')+details :
+        empty('No matching riders in this scope.')));
   }
 
-  function standingsBlock(primary, alternative, prefs, filters) {
-    const alternate = prefs.standingsMethod==='cumulative_top3';
-    const standings = alternate ? alternative : primary;
-    const comparisonMode = prefs.standingsMethod === 'compare';
-    const allTeams = new Map([...primary,...alternative].map(r=>[r.team_key,r.team_name]));
-    const compared = Array.from(allTeams, ([key,name])=>{
-      const stage=byKey(primary,'team_key',key), cumulative=byKey(alternative,'team_key',key);
-      return [esc(name),num(stage?.rank),time(stage?.total_seconds),num(stage?.contributor_count),
-        num(cumulative?.rank),time(cumulative?.total_seconds),num(cumulative?.contributor_count)];
-    });
-    return block('standings',heading('Team Standings',select('standings-method','Timing',
-      [['stage_top3','Fastest three each stage'],['cumulative_top3','Fastest three over the scope'],['compare','Compare both methods']],prefs.standingsMethod)) +
-      note((filters.time_basis==='finish'?'Raw':'Adjusted') + ' time · ' + (comparisonMode?'Stage selects three each day. Cumulative selects three who finished the full scope.':alternate?'Three riders must each finish all selected stages.':'Each selected stage requires three team finishers.')) +
-      (comparisonMode && compared.length ? table(['Team','Stage rank','Stage time','Stage riders','Cumulative rank','Cumulative time','Cumulative riders'],compared,true) : standings.length ? table(['Rank','Team','Total time','Gap','Contributors'],standings.map(r=>
-        [num(r.rank),esc(r.team_name),time(r.total_seconds),time(r.gap_seconds),num(r.contributor_count)]),true) :
-        empty('No team meets the three-rider requirement in this scope.')));
+  function standingsBlock(teams, primary, alternative, a, b, focus, filters) {
+    const rows = teams.map(team=>({
+      team, left:byKey(primary,'team_key',team.team_key), right:byKey(alternative,'team_key',team.team_key)
+    })).sort((x,y)=>(x.left?.rank ?? Infinity)-(y.left?.rank ?? Infinity) || byName(x.team.team_name,y.team.team_name));
+    const moves = rows.filter(r=>r.left && r.right && r.left.rank!==r.right.rank)
+      .sort((x,y)=>Number(Math.min(y.left.rank,y.right.rank)<=5)-Number(Math.min(x.left.rank,x.right.rank)<=5) ||
+        Math.abs(y.left.rank-y.right.rank)-Math.abs(x.left.rank-x.right.rank));
+    const featured = [...new Set([...rows.filter(r=>[a,b,focus].includes(r.team)),...moves,
+      ...rows.filter(r=>r.left || r.right)])].slice(0,6);
+    const ranks = [...new Set(featured.flatMap(r=>[r.left?.rank,r.right?.rank]).filter(available))].sort((x,y)=>x-y);
+    const y = rank => 22+ranks.indexOf(rank)*32;
+    const chart = ranks.length ? '<div class="tt-rank-comparison"><div class="tt-rank-labels"><b>'+icon('timer')+
+      'Fastest three each stage</b><b>'+icon('timer')+'Fastest three over the selected stages</b></div>'+
+      '<svg role="img" aria-label="Team rank comparison" viewBox="0 0 600 '+(ranks.length*32+12)+'">'+
+      featured.filter(r=>r.left && r.right).map(({team,left,right})=>'<g class="tt-slot-'+slot(team,a,b)+'"><title>'+
+        esc(team.team_name)+' · '+left.rank+' to '+right.rank+'</title><path d="M55 '+y(left.rank)+' L545 '+y(right.rank)+
+        '" fill="none" stroke="currentColor" stroke-width="3"/></g>').join('')+
+      ranks.map(rank=>'<g><text x="12" y="'+(y(rank)+4)+'">#'+rank+'</text><text x="560" y="'+(y(rank)+4)+'">#'+rank+'</text></g>').join('')+
+      '</svg><div class="tt-rank-legend">'+featured.map(({team,left,right})=>{
+        const gain = left && right ? left.rank-right.rank : 0;
+        return btn('matrix-team',team.team_key,'<i class="tt-swatch"></i>'+esc(team.team_name)+' <b>'+
+          (left?.rank ?? '—')+' → '+(right?.rank ?? '—')+(gain?' · '+(gain>0?'↑ ':'↓ ')+Math.abs(gain):'')+
+          '</b>','','analysis-link tt-slot-'+slot(team,a,b));
+      }).join('')+'</div></div>' : '';
+    const columns = (row,method) => row ? [num(row.rank),time(row.total_seconds),
+      row.gap_seconds < 60 ? num(row.gap_seconds)+' s' : time(row.gap_seconds),
+      evidence('scoring-'+method,row.team_key,num(row.contributor_count),'View '+row.team_name+' scoring riders · '+method)] :
+      ['—','—','—','—'];
+    return block('standings',heading('Team Standings')+
+      note((filters.time_basis==='finish'?'Raw':'Adjusted')+' time · Stage method can change riders each day. Cumulative method uses the same three riders who completed every selected stage.')+
+      chart+table(['Team','Stage rank','Stage time','Stage gap','Stage riders','Cumulative rank','Cumulative time','Cumulative gap','Cumulative riders'],
+        rows.map(({team,left,right})=>[btn('matrix-team',team.team_key,esc(team.team_name)),
+          ...columns(left,'stage_top3'),...columns(right,'cumulative_top3')]),true)+
+      note('— No eligible standing in this scope.'));
+  }
+
+  function scoringBlock(team,prefs,report) {
+    const method = prefs.scoringMethod;
+    const cumulative = method==='cumulative_top3';
+    const title = cumulative ? 'Fastest three over the selected stages' : 'Fastest three each stage';
+    let body = note('Loading scoring results…');
+    if (report?.error) body = note('Scoring results could not load.')+btn('scoring-'+method,team.team_key,'Retry');
+    if (report?.rows) {
+      const entry = byKey(report.rows,'team_key',team.team_key);
+      if (!entry?.scoring?.length) body = empty('No eligible standing in this scope.');
+      else {
+        const groups = new Map();
+        for (const row of entry.scoring) {
+          const key = cumulative ? row.rider_key : row.stage_id;
+          if (!groups.has(key)) groups.set(key,[]);
+          groups.get(key).push(row);
+        }
+        const sorted = [...groups.values()].sort((a,b)=>cumulative ?
+          a[0].scoring_order-b[0].scoring_order : a[0].stage_id-b[0].stage_id);
+        body = note((entry.time_basis==='finish'?'Raw':'Adjusted')+' time · '+time(entry.total_seconds)+' total · '+
+          entry.stage_count+' stages · '+entry.contributor_count+' scoring riders')+
+          select('scoring-group',cumulative?'Scoring rider':'Stage',sorted.map(rows=>[
+            cumulative ? rows[0].rider_key : rows[0].stage_id,
+            cumulative ? rows[0].rider_name : 'Stage '+rows[0].stage_id
+          ]),prefs.scoringGroup ?? (cumulative?sorted[0][0].rider_key:sorted[0][0].stage_id))+
+          sorted.filter(rows=>String(cumulative?rows[0].rider_key:rows[0].stage_id)===String(prefs.scoringGroup ??
+            (cumulative?sorted[0][0].rider_key:sorted[0][0].stage_id))).map(rows=>
+            note('Subtotal · '+time(rows.reduce((sum,row)=>sum+Number(row.scoring_seconds),0)))+
+            table(['Stage','Rider','Finish rank','Scoring time','Status'],rows.map(row=>[
+              num(row.stage_id),esc(row.rider_name),num(row.finish_rank),time(row.scoring_seconds),'<span class="tt-counted">Counted</span>'
+            ]))).join('');
+        if (cumulative) body = table(['Scoring rider','Total time'],sorted.map(rows=>[
+          btn('scoring-rider',rows[0].rider_key,esc(rows[0].rider_name)),time(rows.reduce((sum,row)=>sum+Number(row.scoring_seconds),0))
+        ]))+body;
+      }
+    }
+    return block('scoring',heading('Scoring Riders · '+team.team_name,btn('close-scoring','','Close'))+
+      select('scoring-method','Timing method',[['stage_top3','Fastest three each stage'],
+        ['cumulative_top3','Fastest three over the selected stages']],method)+
+      note(title+'. Only rides counted in Team Standings appear here.')+body);
   }
 
   pages.team_standings = async function renderTeamPage(ctx) {
@@ -194,49 +338,99 @@
     if (!ctx.isCurrent()) return;
     if (!teams.length) return paint(ctx,empty('No teams in this scope.'));
     const p = ctx.preferences;
-    const defaultTeam = teams.find(t=>/visma/i.test(t.team_name)) || teams[0];
+    const defaultTeam = teams.find(t=>/uae/i.test(t.team_name)) || teams[0];
     p.team = (byKey(teams,'team_key',p.team ?? p.teamKey) || defaultTeam).team_key;
     p.teamA = (byKey(teams,'team_key',p.teamA) || defaultTeam).team_key;
     p.rosterMode ||= 'roster';
-    p.depthSort ||= 'depth';
     p.burdenSort ||= 'most';
-    const scopeMethod = ctx.filters.team_aggregation || 'stage_top3';
-    if (p.lastScopeMethod !== scopeMethod) p.standingsMethod=scopeMethod;
-    p.lastScopeMethod=scopeMethod;
     const cache = new Map();
-    let failedTeam = null;
-    let seq = 0;
+    const scoring = new Map();
+    const pendingTeams = new Set();
+    const failedTeams = new Set();
     function draw() {
       const team = byKey(teams,'team_key',p.team);
       const a = byKey(teams,'team_key',p.teamA);
       const others = teams.filter(t=>t!==a);
-      const b = byKey(others,'team_key',p.teamB) || others.find(t=>/UAE/i.test(t.team_name)) || others[0];
+      const b = byKey(others,'team_key',p.teamB) || others.find(t=>/visma/i.test(t.team_name)) || others[0];
       p.teamB = b?.team_key;
-      const hero = block('depth',heading('How Many Starters Reached the Top Ten?',select('depth-sort','Sort teams',
-        [['depth','Top-10 riders'],['appearances','Top-10 finishes'],['roster','Starting roster']],p.depthSort)) +
-        '<div class="tt-hero"><div>'+depthChart(teams,p)+'</div>'+comparison(teams,a,b)+'</div>');
-      paint(ctx, hero + rosterBlock(roster,team,p) + terrainBreakdown(ctx,roster,team) +
-        burdenBlock(teams,roster,p,cache.get(p.burdenTeam),failedTeam === p.burdenTeam) + standingsBlock(primary,alternative,p,ctx.filters));
+      const count = stageScope(ctx).length;
+      const scope = note(num(count)+' selected stages · '+(ctx.filters.rank_scope==='filtered'?'Matching-group ranks':'Overall ranks'));
+      const hero = block('depth',heading('Who wins, and who stays near the front?')+
+        comparison(teams,a,b)+performanceTable(teams,p));
+      const view = p.scoringMethod ? 'scoring' : p.showBurden ? 'burden' : 'matrix';
+      const contributions = block('contributions',heading('Riders & Contributions',
+        select('matrix-team','Team',teamChoices(teams),team.team_key))+
+        select('contribution-view','View',[['matrix','Stage matrix'],['scoring','Team standings scoring rides'],['burden','Rider time contributions']],view)+
+        (view==='scoring' ? scoringBlock(team,p,scoring.get(p.scoringMethod)) :
+          view==='burden' ? riderTimeBlock(team,roster,p,cache.get(team.team_key),failedTeams.has(team.team_key)) :
+          stageMatrix(ctx,team,roster,cache.get(team.team_key),p,failedTeams.has(team.team_key))));
+      paint(ctx, scope+hero+standingsBlock(teams,primary,alternative,a,b,team,ctx.filters)+contributions+
+        (view==='matrix' ? rosterBlock(roster,team,p)+terrainBreakdown(ctx,roster,team)+burdenSummary(teams,roster,p) : ''),true);
+      ctx.element.querySelector('.tt-all-teams')?.addEventListener('toggle',e=>{p.teamsOpen=e.target.open;});
     }
     async function loadDays(team) {
-      const token = ++seq;
-      if (cache.has(team)) return;
-      failedTeam = null;
+      if (cache.has(team) || pendingTeams.has(team)) return;
+      pendingTeams.add(team);
+      failedTeams.delete(team);
       try {
         const results = await ctx.analytics('rider_stage_results',{...ctx.filters,team_keys:[team]});
-        if (!ctx.isCurrent() || token!==seq) return;
         cache.set(team,results);
-        draw();
-      } catch (err) {
-        if (!ctx.isCurrent() || token!==seq) return;
-        failedTeam = team;
-        draw();
+      } catch {
+        failedTeams.add(team);
+      } finally {
+        pendingTeams.delete(team);
       }
+      if (ctx.isCurrent() && team===p.team) draw();
+    }
+    async function loadScoring(method) {
+      if (scoring.has(method) && !scoring.get(method).error) return;
+      scoring.set(method,{pending:true});
+      try {
+        scoring.set(method,{rows:await ctx.report('team_scoring',{...ctx.filters,team_aggregation:method})});
+      } catch {
+        scoring.set(method,{error:true});
+      }
+      if (ctx.isCurrent() && p.scoringMethod===method) draw();
     }
     draw();
     bind(ctx, ({act,k,terrain},value) => {
       const key = Number(k);
       let target = '';
+      if (act==='team-sort') {
+        p.teamAscending=p.teamSort===k ? !p.teamAscending : k==='team_name';
+        p.teamSort=k; p.teamsOpen=true;
+      }
+      if (act==='team-search') { p.teamSearch=value; p.teamsOpen=true; }
+      if (act==='rider-search') p.riderSearch=value;
+      if (act==='rider-sort') p.riderSort=value;
+      if (act==='add-compare' && key!==p.teamA) {p.teamB=key; p.teamsOpen=true;}
+      if (act==='matrix-team' || act==='coverage') {
+        p.team=Number(value || key); p.matrixRide=null;
+        if (value && p.showBurden) {
+          p.burdenRider=null; p.burdenStage=null;
+          return draw();
+        }
+        if (value && p.scoringMethod) { p.scoringGroup=null; return draw(); }
+        p.scoringMethod=null; p.showBurden=false;
+        p.coverage=act==='coverage'; target='contributions';
+      }
+      if (act==='contribution-view') {
+        p.showBurden=value==='burden';
+        p.scoringMethod=value==='scoring' ? ctx.filters.team_aggregation || 'stage_top3' : null;
+        if (value==='burden') { p.burdenRider=null; p.burdenStage=null; }
+        if (value==='scoring') p.scoringGroup=null;
+      }
+      if (act==='scoring-stage_top3' || act==='scoring-cumulative_top3') {
+        p.team=key; p.showBurden=false; p.scoringMethod=act.slice('scoring-'.length); p.scoringGroup=null; target='contributions';
+      }
+      if (act==='scoring-method') { p.scoringMethod=value; p.scoringGroup=null; }
+      if (act==='scoring-group' || act==='scoring-rider') p.scoringGroup=value || key;
+      if (act==='close-scoring') {p.scoringMethod=null; target='contributions';}
+      if (act==='matrix-ride') { p.matrixRide=k; target='matrix-evidence'; }
+      if (act==='matrix-drill') {
+        const [rider,stage]=k.split(':').map(Number);
+        return teamDrill(ctx,p.team,rider,'results','Stage '+stage+' · rider results',{stage_scope:'selection',stage_ids:[stage]});
+      }
       if (act==='top-days') {
         const r = byKey(roster,'rider_key',key);
         if (r) teamDrill(ctx,r.team_key,r.rider_key,'top10',r.rider_name + ' · top-10 finishes');
@@ -248,24 +442,27 @@
         return;
       }
       if (act==='wins') return teamDrill(ctx,key,null,'wins',byKey(teams,'team_key',key).team_name+' · stage wins');
-      if (act==='depth-sort') p.depthSort=value;
-      if (act==='compare-a') p.teamA=Number(value);
-      if (act==='compare-b') p.teamB=Number(value);
+      if (act==='compare-a') { if (Number(value)===p.teamB) p.teamB=p.teamA; p.teamA=Number(value); }
+      if (act==='compare-b') { if (Number(value)===p.teamA) p.teamA=p.teamB; p.teamB=Number(value); }
       if (act==='roster' || act==='contributors') {
-        p.team=key; p.rosterMode=act; target='roster';
+        p.team=key; p.rosterMode=act; p.scoringMethod=null; p.showBurden=false; p.matrixRide=null; target='roster';
       }
-      if (act==='terrain') { p.team=key; target='breakdown'; }
+      if (act==='terrain') { p.team=key; p.scoringMethod=null; p.showBurden=false; p.matrixRide=null; target='breakdown'; }
       if (act==='roster-mode') p.rosterMode=value;
       if (act==='burden-sort') p.burdenSort=value;
-      if (act==='burden-team') { p.burdenTeam=key; p.burdenRider=null; p.burdenStage=null; target='burden-detail'; ++seq; }
+      if (act==='burden-team') { p.team=key; p.showBurden=true; p.burdenRider=null; p.burdenStage=null; target='contributions'; }
       if (act==='burden-rider') { p.burdenRider=key; p.burdenStage=null; target='daily'; }
       if (act==='compare-day') { p.burdenStage=key; target='teammates'; }
-      if (act==='standings-method') p.standingsMethod=value;
       draw();
       if (target) jump(ctx,target);
-      if (act==='burden-rider') void loadDays(p.burdenTeam);
+      if (act==='burden-rider') void loadDays(p.team);
+      if (!p.showBurden && !p.scoringMethod &&
+          ['matrix-team','coverage','roster','contributors','terrain','close-scoring','contribution-view'].includes(act)) void loadDays(p.team);
+      if (p.scoringMethod) void loadScoring(p.scoringMethod);
     });
-    if (byKey(roster,'rider_key',p.burdenRider) && byKey(teams,'team_key',p.burdenTeam)) await loadDays(p.burdenTeam);
+    if (p.showBurden && byKey(roster,'rider_key',p.burdenRider)?.team_key===p.team) await loadDays(p.team);
+    if (!p.showBurden && !p.scoringMethod) void loadDays(p.team);
+    if (p.scoringMethod) { p.scoringGroup=null; void loadScoring(p.scoringMethod); }
   };
 
   function entities(rows) {

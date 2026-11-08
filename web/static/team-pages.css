@@ -1,4 +1,57 @@
 .tt-page { --tt-teal:var(--accent-green,#087e79); --tt-amber:#ae641a; --tt-muted:var(--ink-secondary,#506172); }
+.tt-team-page { font-variant-numeric:tabular-nums; }
+.tt-team-page .tt-rank-legend, .tt-team-page .tt-stage-legend { display:flex; flex-wrap:wrap; gap:8px 16px; }
+.tt-team-page .tt-compare-action {
+  color:var(--ink-primary);
+  background:var(--bg-subtle,var(--bg-card));
+  border:1px solid var(--border-strong);
+  border-radius:5px;
+  padding:2px 7px;
+  font-size:.82em;
+}
+.tt-team-page .tt-compare-action:hover { border-color:var(--ink-primary); color:var(--ink-primary); }
+.tt-team-page #tt-contributions > .analysis-block { margin-top:12px; }
+.tt-team-page .tt-icon { width:17px; height:17px; flex:none; vertical-align:middle; }
+.tt-team-page .tt-evidence, .tt-team-page .tt-rank-labels b, .tt-team-page .tt-stage-legend span { display:inline-flex; align-items:center; gap:6px; }
+.tt-team-page .tt-slot-a { --tt-slot:var(--tt-teal); }
+.tt-team-page .tt-slot-b { --tt-slot:var(--tt-amber); }
+.tt-team-page .tt-slot-neutral { --tt-slot:var(--tt-muted); }
+.tt-team-page .tt-swatch { display:inline-block; width:8px; height:8px; margin-right:6px; border-radius:2px; background:var(--tt-slot); }
+.tt-team-page .tt-broadcast { background:var(--bg-subtle,var(--bg-card)); border:1px solid var(--border-line); border-radius:10px; padding:16px; }
+.tt-team-page .tt-pair-controls, .tt-team-page .tt-pair-values, .tt-team-page .tt-rank-labels { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 20px; }
+.tt-team-page .tt-pair-controls strong { display:block; margin-bottom:6px; }
+.tt-team-page .tt-pair-controls select { width:100%; }
+.tt-team-page .tt-broadcast-metric { padding:8px 0; border-top:1px solid var(--border-line); }
+.tt-team-page .tt-broadcast-metric:first-of-type { margin-top:12px; }
+.tt-team-page .tt-broadcast-metric h4 { display:flex; align-items:center; gap:8px; margin:0 0 5px; }
+.tt-team-page .tt-pair-values strong, .tt-team-page .tt-pair-values button { font-size:clamp(17px,2vw,25px); line-height:1.2; }
+.tt-team-page .tt-pair-values .tt-mini { display:block; width:100%; margin-top:5px; }
+.tt-team-page .tt-pair-values .tt-mini i { background:var(--tt-slot); }
+.tt-team-page .tt-all-teams, .tt-team-page .tt-coverage { margin:12px 0; }
+.tt-team-page summary { cursor:pointer; font-weight:600; }
+.tt-team-page .tt-rank-comparison { padding:12px; margin-bottom:12px; border:1px solid var(--border-line); border-radius:8px; }
+.tt-team-page .tt-rank-labels b:last-child { justify-self:end; }
+.tt-team-page .tt-rank-comparison > svg { display:block; width:min(100%,680px); margin:auto; }
+.tt-team-page .tt-rank-comparison svg text { fill:var(--ink-primary); font-size:14px; }
+.tt-team-page .tt-rank-comparison svg g { color:var(--tt-slot); }
+.tt-team-page #tt-standings td:not(:first-child), .tt-team-page #tt-standings th:not(:first-child) { text-align:right; white-space:nowrap; }
+.tt-team-page .tt-matrix-wrap { max-width:100%; overflow:auto; }
+.tt-team-page .tt-matrix { border-collapse:separate; border-spacing:2px; width:max-content; }
+.tt-team-page .tt-matrix th { font-size:12px; padding:5px; background:var(--bg-card); }
+.tt-team-page .tt-matrix th:first-child { position:sticky; left:0; text-align:left; z-index:1; }
+.tt-team-page .tt-matrix th .tt-icon { display:block; margin:0 auto; }
+.tt-team-page .tt-matrix td { text-align:center; }
+.tt-team-page .tt-matrix td button { min-width:34px; min-height:30px; border:1px solid var(--border-line); border-radius:4px; color:var(--ink-primary); cursor:pointer; }
+.tt-team-page .tt-matrix-top { background:color-mix(in srgb,var(--tt-teal) 26%,var(--bg-card)); font-weight:700; }
+.tt-team-page .tt-matrix-finish { background:var(--bg-card); }
+.tt-team-page .tt-matrix-missing { color:var(--tt-muted); }
+.tt-team-page .tt-counted { background:color-mix(in srgb,var(--tt-teal) 20%,var(--bg-card)); padding:2px 6px; border-radius:4px; font-weight:600; }
+.tt-team-page :is(input, summary, [tabindex]):focus-visible { outline:2px solid var(--tt-teal); outline-offset:2px; }
+@media (max-width:480px) {
+  .tt-team-page .tt-broadcast { padding:10px; }
+  .tt-team-page .tt-pair-controls, .tt-team-page .tt-pair-values, .tt-team-page .tt-rank-labels { gap:8px; }
+  .tt-team-page .tt-rank-labels { font-size:12px; }
+}
 .tt-page h4 { margin:14px 0 8px; font-size:14px; color:var(--ink-primary); }
 .tt-page .analysis-block { scroll-margin-top:14px; }
 .tt-page .analysis-head { gap:10px; flex-wrap:wrap; }

@@ -1278,6 +1278,7 @@ def create_app(
         "gc_trajectory": "SELECT * FROM dw.gc_trajectory(%s)",
         "gc_time_rules": "SELECT * FROM dw.gc_time_rules(%s)",
         "team_roster_performance": "SELECT * FROM dw.team_roster_performance(%s)",
+        "team_scoring": "SELECT * FROM dw.team_standings_detail(%s, true)",
         "terrain_performance": "SELECT * FROM dw.terrain_performance(%s)",
         "route_directory": "SELECT * FROM dw.route_directory(%s)",
         "country_outcomes": "SELECT * FROM dw.country_outcomes(%s)",
