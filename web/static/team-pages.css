@@ -20,7 +20,9 @@
 .tt-team-page .tt-broadcast { background:var(--bg-subtle,var(--bg-card)); border:1px solid var(--border-line); border-radius:10px; padding:16px; }
 .tt-team-page .tt-pair-controls, .tt-team-page .tt-pair-values, .tt-team-page .tt-rank-labels { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 20px; }
 .tt-team-page .tt-pair-controls strong { display:block; margin-bottom:6px; }
-.tt-team-page .tt-pair-controls select { width:100%; }
+.tt-team-page .tt-pair-controls .tt-control { display:flex; }
+.tt-team-page .tt-pair-controls .tt-control span { flex:none; white-space:nowrap; }
+.tt-team-page .tt-pair-controls select { flex:1; min-width:0; }
 .tt-team-page .tt-broadcast-metric { padding:8px 0; border-top:1px solid var(--border-line); }
 .tt-team-page .tt-broadcast-metric:first-of-type { margin-top:12px; }
 .tt-team-page .tt-broadcast-metric h4 { display:flex; align-items:center; gap:8px; margin:0 0 5px; }

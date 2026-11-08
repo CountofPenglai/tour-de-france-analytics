@@ -86,7 +86,7 @@
     flat:'M3 16h18', hilly:'M3 17q4-10 8-4t10-3', mountain:'M3 19 12 5l9 14M9 10l3 3 3-3',
     arrow:'M5 12h14m-6-6 6 6-6 6'
   };
-  const icon = name => '<svg class="tt-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="' + icons[name] + '"/></svg>';
+  const icon = name => '<svg class="tt-icon" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="' + icons[name] + '"/></svg>';
   const evidence = (act,key,label,name) => btn(act,key,label+icon('arrow'),'aria-label="'+esc(name)+'"','analysis-link tt-evidence');
   const slot = (team,a,b) => team===a ? 'a' : team===b ? 'b' : 'neutral';
 
