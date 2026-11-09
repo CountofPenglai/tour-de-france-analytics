@@ -1,0 +1,75 @@
+.country-dashboard { display: grid; gap: 18px; min-width: 0; }
+.country-dashboard .analysis-block:first-child { border-top: 3px solid var(--tour-yellow); }
+.country-dashboard h3 { margin: 0 0 10px; color: #1b394d; font-size: 21px; line-height: 1.3; }
+.country-dashboard h4 { margin: 0 0 5px; color: #1b394d; font-size: 17px; }
+.country-dashboard p { color: #61798a; font-size: 12px; line-height: 1.5; }
+.country-intro { margin: 0 0 16px; }
+.country-intro strong { color: #294e65; }
+.country-kpi-grid, .country-chart-grid, .country-detail-stat-grid, .country-preview-grid, .country-outcome-grid {
+  display: grid; gap: 14px; grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.country-kpi-grid > div, .country-outcome-grid > div {
+  display: flex; flex-direction: column; gap: 5px; padding: 16px 18px;
+  border: 1px solid var(--border-line); border-radius: 10px; background: #fff;
+}
+.country-kpi-grid strong, .country-outcome-grid strong { color: #1b394d; font-size: 27px; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.country-kpi-grid span, .country-outcome-grid span, .country-outcome-grid small { color: #61798a; font-size: 11px; }
+.country-chart-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 16px; }
+.country-chart { min-width: 0; padding: 18px; border: 1px solid var(--border-line); border-radius: 10px; background: #fff; }
+.country-chart p { margin: 0 0 12px; font-size: 11px; }
+.country-chart-row {
+  display: grid; grid-template-columns: minmax(90px, 1fr) minmax(60px, 1.2fr) 30px;
+  align-items: center; gap: 10px; width: 100%; padding: 7px 2px;
+  border: 0; border-bottom: 1px solid #edf1f3; background: transparent;
+  color: #24455a; text-align: left; font: inherit; font-size: 11px; cursor: pointer;
+}
+.country-chart-row:hover, .country-chart-row:focus-visible { background: #f2f7f9; }
+.country-chart-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.country-chart-track { height: 9px; border-radius: 5px; background: #e9eff3; overflow: hidden; }
+.country-chart-fill { display: block; height: 100%; border-radius: 5px; }
+.country-chart-fill.riders { background: #1f7181; }
+.country-chart-fill.teams { background: #b78522; }
+.country-chart-row strong { text-align: right; font-variant-numeric: tabular-nums; }
+.country-example { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 11px; margin-top: 16px; padding: 13px 16px; border: 1px solid var(--border-line); border-radius: 9px; background: #f7fafb; color: #294e65; font-size: 11px; }
+.country-example > span { color: #61798a; }
+.country-example > button, .country-back { padding: 7px 10px; border: 1px solid #bfd6dd; border-radius: 6px; background: #fff; color: #1f6775; font: inherit; font-weight: 650; cursor: pointer; }
+.country-example > button:hover, .country-back:hover { background: #edf6f8; }
+.country-table-block > p { margin: 0 0 12px; }
+.country-table-scroll { max-width: 100%; max-height: 480px; overflow: auto; border: 1px solid var(--border-line); border-radius: 8px; }
+.country-table-scroll .analysis-table { min-width: 930px; }
+.country-table-scroll .analysis-table thead th { position: sticky; top: 0; z-index: 1; background: #f5f8f9; }
+.country-sort { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 650; text-align: left; cursor: pointer; }
+.country-link { padding: 0; border: 0; background: transparent; color: #0c7380; font: inherit; font-weight: 650; text-align: left; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.country-link:hover { color: #064e56; }
+.country-detail { background: #f5f8fb; }
+.country-detail-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.country-detail-top h3 { margin: 0; }
+.country-detail-stat-grid { margin-top: 16px; }
+.country-detail-stat {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
+  min-width: 0; padding: 16px 18px; overflow: hidden;
+  border: 1px solid var(--border-line); border-radius: 10px; background: #fff;
+}
+.country-detail-stat::after { content: ""; position: absolute; top: 16px; right: 0; bottom: 16px; width: 3px; background: var(--tour-yellow); }
+.country-detail-stat:nth-child(2)::after { background: #00a099; }
+.country-detail-stat:nth-child(3)::after { background: #6a92c4; }
+.country-detail-stat span { color: #5c7184; font-size: 11px; font-weight: 600; }
+.country-detail-stat strong { color: var(--ink-primary); font-size: 34px; font-weight: 750; line-height: 1.15; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+.country-detail-stat small { color: #6a7d8e; font-size: 10px; line-height: 1.45; }
+.country-member-preview > p, .country-outcomes > p { margin: 0 0 13px; }
+.country-preview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.country-preview-grid > div { min-width: 0; padding: 15px 18px; border: 1px solid var(--border-line); border-radius: 9px; background: #fff; }
+.country-preview-grid strong { color: #1a3549; font-size: 13px; }
+.country-preview-grid ul { margin: 9px 0 0; padding-left: 18px; color: #27475a; font-size: 12px; line-height: 1.7; }
+.country-preview-grid li { margin-bottom: 6px; }
+.country-preview-grid li small { display: block; color: #61798a; line-height: 1.5; }
+.country-preview-grid p, .country-preview-grid > div > small { color: #61798a; font-size: 11px; line-height: 1.5; }
+.country-full-members { min-width: 0; }
+.country-full-members > summary, .country-evidence > summary { color: #294e65; font-size: 12px; font-weight: 650; cursor: pointer; }
+.country-full-members .country-table-scroll, .country-evidence .country-table-scroll { margin-top: 12px; }
+.country-outcome-grid { margin: 14px 0; }
+.country-evidence { padding: 12px 14px; border: 1px solid var(--border-line); border-radius: 8px; background: #fff; }
+.country-evidence .country-table-scroll { max-height: 260px; }
+.country-dashboard :is(button, summary):focus-visible { outline: 3px solid #18827c; outline-offset: 2px; }
+@media (max-width: 900px) { .country-chart-grid { grid-template-columns: 1fr; } .country-kpi-grid, .country-outcome-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .country-detail-stat-grid, .country-preview-grid, .country-kpi-grid, .country-outcome-grid { grid-template-columns: 1fr; } }
