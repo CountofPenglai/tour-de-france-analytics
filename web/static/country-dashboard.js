@@ -131,9 +131,9 @@
         <tbody>${allRows}</tbody></table></div></details>` : ""}
       <section class="analysis-block country-outcomes" aria-label="Country race results">
         <h3>Race results for riders from ${esc(country.country_name)}</h3>
-        <p>Results follow rider nationality, even when the team is registered elsewhere. Best GC uses final adjusted-time ranking; wins and podiums use the selected stages.</p>
+        <p>Results follow rider nationality, even when the team is registered elsewhere. GC (General Classification) is the overall rider ranking based on total adjusted time across all 21 stages; less time means a better rank. Best final GC rank shows the best overall position achieved by a full-race finisher of this nationality. Wins and podiums use the selected stages.</p>
         <div class="country-outcome-grid">
-          <div><span>Best final GC</span><strong>${country.best_gc_rank == null ? "—" : "#" + esc(country.best_gc_rank)}</strong>
+          <div><span>Best final GC rank</span><strong>${country.best_gc_rank == null ? "—" : "#" + esc(country.best_gc_rank)}</strong>
             <small>${bestRiders.length ? bestRiders.map(row => link("gc-rider", row.rider_key, row.rider_name + " →")).join(", ") : nationalCount === 0 ? "No national riders in this selection" : "No eligible full-race finisher"}</small></div>
           <div><span>Stage wins</span><strong>${count(country.stage_wins)}</strong><small>Rank 1 stage finishes</small></div>
           <div><span>Podium finishes</span><strong>${count(country.podium_finishes)}</strong><small>Rank 1–3 stage finishes</small></div>
