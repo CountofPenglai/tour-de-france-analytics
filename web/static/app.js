@@ -13,7 +13,7 @@
   const EMBED_REFRESH_LEAD_SECONDS = 60; // Refresh ~9 minutes (540s) into 10-minute (600s) token
   const EMBED_RETRY_DELAY_MS = 60 * 1000;
 
-  const ALLOWED_VIEWS = ["overview", "explore", "methods", "drilldown"];
+  const ALLOWED_VIEWS = ["overview", "explore", "methods", "drilldown", "questions"];
   let drilldownWorkspace = null;
   const insightPreferences = {};
   const pageTrail = [];
@@ -2221,7 +2221,7 @@
     if (!box) return;
     box.hidden = !pageTrail.length;
     const last = pageTrail.at(-1);
-    if (last) document.getElementById("page-return-btn").textContent = "← " + (last.view === "overview" ? "Race overview" : MODULE_DESCRIPTIONS[last.module]?.title || "Previous view");
+    if (last) document.getElementById("page-return-btn").textContent = "← " + (last.view === "overview" ? "Race overview" : last.view === "questions" ? "Question Index" : MODULE_DESCRIPTIONS[last.module]?.title || "Previous view");
   }
 
   function rememberPage() {
@@ -2251,7 +2251,7 @@
     renderSelectedStagePills(); renderSelectedTeamPills(); renderSelectedRiderPills(); syncScopeControlVisibility(); updateScopeBanner();
     insightPreferences[last.module] = last.prefs;
     syncPageReturn();
-    if (last.view === "overview") await switchWorkspaceView("overview");
+    if (["overview","questions"].includes(last.view)) await switchWorkspaceView(last.view);
     else await goToAnalysis(last.module, {}, false);
     window.scrollTo({top:last.scroll,behavior:"instant"});
   }
@@ -3425,6 +3425,7 @@
       explore: document.getElementById("view-explore"),
       methods: document.getElementById("view-methods"),
       drilldown: document.getElementById("view-drilldown"),
+      questions: document.getElementById("view-questions"),
     };
     Object.keys(views).forEach((k) => {
       if (views[k]) {
@@ -3439,7 +3440,7 @@
 
     const heading = document.getElementById("workspace-heading");
     if (heading) {
-      heading.textContent = { overview: "Race overview", explore: "Explore the race", methods: "Methods & definitions", drilldown: "Drill Down" }[viewName] || "Race Analytics";
+      heading.textContent = { overview: "Race overview", explore: "Explore the race", methods: "Methods & definitions", drilldown: "Drill Down", questions: "Question Index" }[viewName] || "Race Analytics";
     }
 
     document.getElementById("inspector-details")?.classList.toggle("hidden", viewName === "drilldown");
@@ -3571,6 +3572,15 @@
 
   function bindEvents() {
     bindAppearance();
+    RaceQuestionIndex.mount(document.getElementById("question-index"), {
+      go:goToAnalysis,
+      isCurrent:module => state.activeView === "explore" && state.activeExploreModule === module,
+      findTarget:selector => {
+        const target = document.getElementById("analysis-host").querySelector(selector);
+        return target?.querySelector("h3") || target || document.getElementById("workspace-heading");
+      },
+      focus:scrollAndFocusElement,
+    });
     Array.from(document.querySelectorAll(".workspace-nav .nav-btn")).forEach((btn) => {
       btn.addEventListener("click", () => {
         pageTrail.length=0; syncPageReturn();

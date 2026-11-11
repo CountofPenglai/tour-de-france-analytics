@@ -13,9 +13,10 @@
   <link rel="stylesheet" href="/static/insights.css" />
   <link rel="stylesheet" href="/static/analysis-layout.css" />
   <link rel="stylesheet" href="/static/gc-pages.css" />
-  <link rel="stylesheet" href="/static/team-pages.css?v=3" />
+  <link rel="stylesheet" href="/static/team-pages.css?v=4" />
   <link rel="stylesheet" href="/static/route-pages.css" />
   <link rel="stylesheet" href="/static/country-dashboard.css" />
+  <link rel="stylesheet" href="/static/question-index.css" />
 </head>
 <body>
 <dialog id="filter-drawer" class="filter-drawer" aria-labelledby="filter-drawer-title"><div class="drawer-title"><div><h2 id="filter-drawer-title">Scope &amp; filters</h2></div><button type="button" id="close-filters-btn" class="icon-button" aria-label="Close filters without applying">×</button></div><!-- Filters apply together on submit; labels carry the instructions. -->      <!-- Global Analytical Controls -->
@@ -157,6 +158,7 @@
   <button class="rail-item" data-open-module="country_participation">Country Participation</button>
   <button class="nav-btn rail-item" data-view="drilldown" id="nav-view-drilldown">Drill Down</button>
   <button class="rail-item exploration-entry" data-open-module="rider_specialisation" data-exploration="true">Exploratory Analysis</button>
+  <button type="button" class="nav-btn rail-item" data-view="questions" id="nav-view-questions">Question Index <span class="question-nav-count">15</span></button>
 </nav>
 <nav class="workspace-nav rail-utilities" aria-label="Additional workspace views"><button type="button" class="nav-btn hidden" data-view="explore" id="nav-view-explore">Explore</button><button type="button" class="nav-btn rail-item" data-view="methods" id="nav-view-methods">Methods &amp; definitions</button></nav>
 <div class="rail-footer"><div class="connected"><i></i>2025 race dataset</div><b>BT5110 · Course Project</b><div id="rail-race-context"></div></div>
@@ -206,6 +208,8 @@
       <div class="workspace-split" id="workspace-split-container">
         <!-- Primary Analytical Area -->
         <div class="workspace-primary">
+
+          <section id="view-questions" class="view-section hidden" aria-labelledby="workspace-heading"><div id="question-index"></div></section>
 
           <section id="view-drilldown" class="view-section hidden" aria-labelledby="workspace-heading"><div id="drill-workspace" class="drill-workspace"></div></section>
 
@@ -539,9 +543,10 @@
   <script src="/static/drilldown.js"></script>
   <script src="/static/insights.js" defer></script>
   <script src="/static/gc-pages.js" defer></script>
-  <script src="/static/team-pages.js?v=2" defer></script>
+  <script src="/static/team-pages.js?v=3" defer></script>
   <script src="/static/route-pages.js" defer></script>
   <script src="/static/country-dashboard.js" defer></script>
+  <script src="/static/question-index.js" defer></script>
   <script src="/static/app.js" defer></script>
 </body>
 </html>

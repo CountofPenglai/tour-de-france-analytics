@@ -15,7 +15,9 @@ class Element {
 const els=new Map();const get=id=>{if(!els.has(id))els.set(id,new Element(id));return els.get(id);};
 const fullTable=new Element('full-table');fullTable.dataset.openModule='rider_standings';
 const document={getElementById:get,querySelectorAll:s=>s==='[data-open-module]'?[fullTable]:[]};
-const context={document,console,structuredClone,URLSearchParams,setTimeout,clearTimeout,RaceAppearance:require("../web/static/appearance.js")};vm.runInNewContext(source,context);
+const context={document,console,structuredClone,URLSearchParams,setTimeout,clearTimeout,RaceAppearance:require("../web/static/appearance.js")};
+vm.runInNewContext(fs.readFileSync(path.join(__dirname,"../web/static/question-index.js"),"utf8"),{window:context,structuredClone});
+vm.runInNewContext(source,context);
 const p=context.probe;p.setEmbed(()=>Promise.resolve());p.setExplorer(()=>Promise.resolve());
 const controls=['filter-stage-scope','filter-as-of-stage','filter-time-basis','filter-rank-scope','filter-team-aggregation','filter-team-select','filter-rider-select','filter-young-only'].map(get);
 get('global-filter-form').querySelectorAll=()=>controls;

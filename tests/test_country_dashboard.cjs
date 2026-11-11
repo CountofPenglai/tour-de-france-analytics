@@ -62,3 +62,48 @@ test("country story keeps nationality and registration separate through Slovenia
   await click("back-countries","");
   assert.match(root.innerHTML,/Countries: participation and results/);
 });
+
+
+test("team links from nationality and registration pages open the registered team's roster", async () => {
+  const drilldown = require("../web/static/drilldown.js");
+  const model = drilldown.createModel({metadata:{
+    countries:[slovenia,uae], riders:uaeRoster, stages:[],
+    teams:[{team_key:10,team_name:pogacar.team_name,team_country_code:"UAE"}],
+  }});
+  const root = {innerHTML:"",querySelector:()=>null};
+  let intent;
+  await window.RacePages.country_participation({
+    element:root, filters:{}, preferences:{}, isCurrent:()=>true,
+    report:async()=>[slovenia,uae], analytics:async()=>[],
+    post:async path=>({rows:path.includes("/SLO/") ? [pogacar] : uaeRoster}),
+    drill:value=>{intent=value;},
+  });
+  const click = (action,value) => root.onclick({target:{closest:()=>({dataset:{action,value}})}});
+  for (const code of ["SLO","UAE"]) {
+    await click("open-country",code);
+    await click("team-drill","10");
+    assert.deepEqual(intent.path,["UAE",10]);
+    assert.match(intent.label,/United Arab Emirates/);
+    const path = drilldown.validPath(model,intent.dimension,intent.role,intent.path);
+    const view = drilldown.getView(model,intent.dimension,intent.role,path);
+    assert.equal(view.level,"rider");
+    assert.deepEqual(view.rows.map(row=>row.key),["1","2","3","4","5","6","7","8"]);
+  }
+});
+
+test("GC sorting keeps countries without a rank last in both directions", async () => {
+  const root = {innerHTML:"",querySelector:()=>null};
+  const denmark = {...slovenia,country_code:"DEN",country_name:"Denmark",best_gc_rank:2};
+  const bahrain = {...uae,country_code:"BAH",country_name:"Bahrain"};
+  await window.RacePages.country_participation({
+    element:root, filters:{}, preferences:{}, isCurrent:()=>true,
+    report:async()=>[uae,denmark,bahrain,slovenia], analytics:async()=>[],
+  });
+  const sort = () => root.onclick({target:{closest:()=>({dataset:{action:"sort",value:"best_gc_rank"}})}});
+  const order = () => [...root.innerHTML.match(/<tbody>([\s\S]*?)<\/tbody>/)[1]
+    .matchAll(/<code>(.*?)<\/code>/g)].map(match=>match[1]);
+  await sort();
+  assert.deepEqual(order(),["SLO","DEN","BAH","UAE"]);
+  await sort();
+  assert.deepEqual(order(),["DEN","SLO","BAH","UAE"]);
+});

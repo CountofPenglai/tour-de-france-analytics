@@ -39,6 +39,9 @@
     const key = state.countrySortKey || "rider_count";
     const desc = state.countrySortDesc !== false;
     const sorted = rows.slice().sort((a, b) => {
+      if (key === "best_gc_rank" && (a[key] == null) !== (b[key] == null)) {
+        return a[key] == null ? 1 : -1;
+      }
       const delta = ["country_name", "country_code"].includes(key)
         ? String(a[key]).localeCompare(String(b[key]))
         : count(a[key]) - count(b[key]);
@@ -206,7 +209,12 @@
       if (!country) return;
       if (action === "gc-rider") return ctx.go("rider_standings", {riderKey:Number(value),finalGC:true});
       if (action === "stage-evidence") return ctx.go("stage_summary", {stageMode:"order",stageId:Number(value),stageRiderKey:Number(button.dataset.riderKey),stageTeamKey:null,stageFull:false});
-      if (action === "team-drill") return ctx.drill({dimension:"country",role:"registration",path:[detailCode,Number(value)],metric:"roster",label:`${country.country_name} · registered team`});
+      if (action === "team-drill") {
+        const row = cache.get(detailCode)?.rows?.find(item => Number(item.team_key) === Number(value));
+        if (!row) return;
+        const teamCountry = countryByCode(rows, row.team_country_code);
+        return ctx.drill({dimension:"country",role:"registration",path:[row.team_country_code,Number(value)],metric:"roster",label:`${teamCountry?.country_name || row.team_country_code} · registered team`});
+      }
       if (action === "rider-drill") {
         const row = cache.get(detailCode)?.rows?.find(item => Number(item.rider_key) === Number(value));
         if (!row) return;

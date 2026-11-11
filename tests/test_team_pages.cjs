@@ -31,7 +31,7 @@ test('team depth opens its full roster including zero contributions and narrows 
   assert.ok(element.innerHTML.indexOf('Top-10 riders') < element.innerHTML.indexOf('Team Standings'));
   assert.match(element.innerHTML,/Zero &lt;Exit&gt;/);
   click('contributors',1);
-  assert.doesNotMatch(element.innerHTML,/Zero &lt;Exit&gt;/);
+  assert.doesNotMatch(element.innerHTML.match(/id="tt-roster"[\s\S]*?<\/section>/)[0],/Zero &lt;Exit&gt;/);
   click('roster',1);
   click('top-days',11);
   assert.deepEqual(drills[0].path,[1,11]);
@@ -133,7 +133,8 @@ test('a late daily-time response cannot replace the currently selected team deta
   const {ctx,element,click} = fixture({team_depth:teams,team_roster_performance:roster});
   const orig=ctx.analytics, pending=new Map();
   ctx.analytics=(name,filters)=>name==='rider_stage_results' ? new Promise(resolve=>pending.set(filters.team_keys[0],resolve)) : orig(name,filters);
-  await window.RacePages.team_standings(ctx);
+  const rendering = window.RacePages.team_standings(ctx);
+  await new Promise(setImmediate);
   element.onchange({type:'change',target:{closest:()=>({dataset:{act:'contribution-view'},value:'burden'})}});
   click('burden-team',1);
   click('burden-rider',10);
@@ -142,7 +143,7 @@ test('a late daily-time response cannot replace the currently selected team deta
   pending.get(2)([{rider_key:20,stage_id:2,stage_date:'day-two',adjusted_time_seconds:3599}]);
   await new Promise(resolve=>setImmediate(resolve));
   pending.get(1)([{rider_key:10,stage_id:1,stage_date:'stale-day-one',adjusted_time_seconds:3599}]);
-  await new Promise(resolve=>setImmediate(resolve));
+  await rendering;
   assert.match(element.innerHTML,/day-two/);
   assert.doesNotMatch(element.innerHTML,/stale-day-one/);
 });
@@ -188,4 +189,20 @@ test('an exited rider can identify a team with rides even when the rider has no 
   assert.match(element.innerHTML,/No riders completed/);
   element.onchange({type:'change',target:{closest:()=>({dataset:{act:'entity-kind'},value:'team'})}});
   assert.match(element.innerHTML,/Team Visma/);
+});
+
+test('initial team rendering finishes after daily data so navigation can focus the final content', async () => {
+  const {ctx} = fixture({team_depth:[{team_key:1,team_name:'UAE',participants:1,
+    top10_distinct_riders:1,top10_finishes:1,top10_stages:1,selected_stage_count:1,wins:1}]});
+  const analytics = ctx.analytics;
+  let finishDays,complete=false;
+  ctx.analytics = (name,...args) => name==='rider_stage_results' ?
+    new Promise(resolve=>{finishDays=resolve;}) : analytics(name,...args);
+  const rendering = window.RacePages.team_standings(ctx).then(()=>{complete=true;});
+  await new Promise(setImmediate);
+  assert.equal(typeof finishDays,'function');
+  assert.equal(complete,false,'Navigation must wait for the final team-page redraw');
+  finishDays([]);
+  await rendering;
+  assert.equal(complete,true);
 });

@@ -461,7 +461,7 @@
       if (p.scoringMethod) void loadScoring(p.scoringMethod);
     });
     if (p.showBurden && byKey(roster,'rider_key',p.burdenRider)?.team_key===p.team) await loadDays(p.team);
-    if (!p.showBurden && !p.scoringMethod) void loadDays(p.team);
+    if (!p.showBurden && !p.scoringMethod) await loadDays(p.team);
     if (p.scoringMethod) { p.scoringGroup=null; void loadScoring(p.scoringMethod); }
   };
 
@@ -476,75 +476,76 @@
   }
   const moverOrder = (a,b) => Number(available(b.terrain_rank_gain))-Number(available(a.terrain_rank_gain)) ||
     Number(b.terrain_rank_gain)-Number(a.terrain_rank_gain) || byName(a.entity_name,b.entity_name);
-  const entityChoices = items => [...items].sort((a,b)=>byName(a.entity_name,b.entity_name)).map(t=>[t.entity_key,t.entity_name]);
-  function dotProfile(selected) {
-    const speeds = selected.flatMap(e=>Object.values(e.cells).map(c=>Number(c.speed_kmh)));
-    const low = Math.max(0,Math.floor((Math.min(...speeds)-1)/5)*5), high = Math.ceil((Math.max(...speeds)+1)/5)*5;
-    const ticks = [high,(high+low)/2,low];
-    const guides = ticks.map((v,i)=>'<div class="tt-plot-guide" style="top:'+50*i+'%"><span>'+num(v,1)+'</span></div>').join('');
-    const marks = types.map(type=>'<div class="tt-plot-col">' + selected.map((e,i)=>{
-      const c = e.cells[type];
-      if (!c) return '';
-      const y = 100 * (high-Number(c.speed_kmh)) / (high-low);
-      const title = esc(e.entity_name+' · '+terrainLabel[type]+' · '+num(c.speed_kmh,2)+' km/h · ' + num(c.sample_count)+' completed results');
-      return btn('profile-days',e.entity_key,'','data-terrain="'+type+'" style="top:'+y+'%;left:calc(50% + '+(selected.length===1?0:i?6:-6)+'px)" aria-label="'+title+'" title="'+title+'"','tt-dot tt-series-'+i);
-    }).join('')+'</div>').join('');
-    return '<div class="tt-plot-unit">km/h</div><div class="tt-plot">'+guides+marks+'</div><div class="tt-plot-labels">'+
-      types.map(t=>'<span>'+terrainLabel[t]+'</span>').join('')+'</div>';
+  function speedRows(subjects, type) {
+    return subjects.filter(e=>available(e.cells[type]?.speed_kmh) && e.cells[type].sample_count>0)
+      .sort((a,b)=>Number(b.cells[type].speed_kmh)-Number(a.cells[type].speed_kmh) || byName(a.entity_name,b.entity_name));
   }
-  function profileBlock(subjects, selected, prefs, filters) {
-    const choices = entityChoices(subjects);
-    const [a,b] = selected;
-    const names = prefs.entityKind==='team'?'team':'rider';
-    const controls = select('entity-kind','Compare',[['rider','Riders'],['team','Teams']],prefs.entityKind);
-    const selectors = '<div class="tt-profiles"><div class="tt-series-label tt-first">'+select('subject-a','First '+names,choices,a.entity_key) +
-      '</div>' + (b?'<div class="tt-series-label tt-second">'+select('subject-b','Second '+names,choices.filter(([key])=>key!==a.entity_key),b.entity_key)+'</div>':'')+'</div>';
-    const ordered = [...subjects].filter(r=>available(r.terrain_rank_gain)).sort(moverOrder);
-    const cohortSize = ordered[0]?.ranked_entities;
-    const rankScope = filters.rank_scope==='filtered' ? 'matching' : 'overall';
-    const movers = '<aside class="tt-rank-side"><h4>Mountain Rank Gains</h4>' + (ordered.length?
-      note('Flat and hilly stages form the baseline. Both ranks compare '+num(cohortSize)+' '+names+(cohortSize===1?'':'s')+' ('+rankScope+').') +
-      table([prefs.entityKind==='team'?'Team':'Rider','Baseline','Mountain','Gain'],ordered.map(r=>[
-        btn('focus-subject',r.entity_key,esc(r.entity_name)),num(r.baseline_rank),num(r.mountain_rank),signed(r.terrain_rank_gain)]),true) :
-      empty('No matching baseline and mountain results in this scope.'))+'</aside>';
-    const rankChange = e => available(e.terrain_rank_gain) ?
-      '#' + num(e.baseline_rank) + ' → #' + num(e.mountain_rank) + ' (' + signed(e.terrain_rank_gain) + ')' : '—';
-    const samples = selected.map((e,i)=>['<span class="tt-series-key tt-series-'+i+'"></span>'+esc(e.entity_name),
-      ...types.map(t=>{const c=e.cells[t];return c ? btn('profile-days',e.entity_key,num(c.speed_kmh,2)+' <small>('+num(c.sample_count)+')</small>',
-        'data-terrain="'+t+'" title="Speed in km/h and completed results"') : '—';}),rankChange(e)]);
-    return block('profiles',heading('Who Gains Ground in the Mountains?',controls) +
-      '<div class="tt-profile-grid"><div>'+selectors+dotProfile(selected)+table(['km/h (results)',...types.map(t=>terrainLabel[t]),'Baseline → mountain rank'],samples)+
-      note(prefs.entityKind==='team' ? 'Team speed includes every member of each matching team. Each ride contributes its distance and raw finish time.' :
-        'Speed uses all kilometres ridden divided by raw finish time.')+'</div>'+movers+'</div>');
+  function listFooter(shown, total, all, action, label='riders') {
+    return '<div class="tt-list-foot"><span>'+num(shown)+' of '+num(total)+' '+label+'</span>'+
+      (total>10 ? btn(action,'',all?'Show top 10':'Show all '+num(total)) : '')+'</div>';
   }
-  function mountainBlock(model, selected, prefs) {
-    const teamMode = prefs.entityKind==='team';
-    const focus = selected.find(e=>e.entity_key===prefs.mountainTeam) || selected[0];
-    const riders = model.rider.filter(r=>teamMode ? r.team_key===focus.entity_key :
-      prefs.evidenceScope==='all' || selected.some(e=>e.entity_key===r.entity_key));
-    const mountain = r=>r.cells.mountain;
-    const podiumRate = c=> c ? c.podium_count/c.sample_count : -1;
+  function profileBlock(ctx, subjects, prefs) {
+    const type=prefs.terrainType, teamMode=prefs.entityKind==='team', names=teamMode?'teams':'riders';
+    const ordered=speedRows(subjects,type), cutoff=ordered[9]?.cells[type].speed_kmh;
+    // Include every rider tied at the tenth position; do not invent a GC rank.
+    const shown=prefs.showLeaders ? ordered : ordered.filter((e,i)=>i<10 || Number(e.cells[type].speed_kmh)===Number(cutoff));
+    const max=Number(ordered[0]?.cells[type].speed_kmh)||1;
+    const stageCount=stageScope(ctx,type).length;
+    const controls=select('entity-kind','View',[['rider','Riders'],['team','Teams']],prefs.entityKind);
+    const tabs='<div class="tt-terrain-tabs" role="group" aria-label="Stage type">'+types.map(t=>btn('terrain-type',t,
+      icon(t==='individual time-trial'?'timer':t)+'<span>'+terrainLabel[t]+'</span><small>'+stageScope(ctx,t).length+'</small>',
+      'aria-pressed="'+(type===t)+'"','tt-terrain-tab')).join('')+'</div>';
+    const records=shown.map(e=>{
+      const c=e.cells[type], count=teamMode?num(c.sample_count):num(c.sample_count)+' / '+stageCount;
+      const attrs='data-terrain="'+esc(type)+'" aria-label="'+esc('View '+e.entity_name+' · '+terrainLabel[type]+' results')+'"';
+      return '<tr data-speed-key="'+e.entity_key+'"><td>'+btn('profile-days',e.entity_key,esc(e.entity_name),attrs)+
+        (teamMode?'':'<small class="tt-speed-team">'+esc(e.team_name)+'</small>')+'</td><td><div class="tt-speed-value">'+
+        '<span class="tt-speed-meter" aria-hidden="true"><i style="width:'+100*Number(c.speed_kmh)/max+'%"></i></span><strong>'+Number(c.speed_kmh).toFixed(2)+'</strong></div></td>'+
+        '<td>'+btn('profile-days',e.entity_key,count,attrs,(!teamMode && c.sample_count<stageCount?'tt-partial ':'')+'analysis-link')+'</td></tr>';
+    }).join('');
+    const leaderboard='<section class="tt-speed-board" aria-label="'+terrainLabel[type]+' speed leaderboard">'+
+      '<div class="tt-list-heading"><h4>'+terrainLabel[type]+'</h4><span>'+stageCount+' stages · '+num(ordered.length)+' '+names+'</span></div>'+
+      (ordered.length ? '<div class="tt-speed-scroll'+(prefs.showLeaders?' tt-expanded-list':'')+'" data-scroll="speed-leaders"><table class="analysis-table tt-speed-table">'+
+        '<thead><tr><th>'+ (teamMode?'Team':'Rider')+'</th><th>Average speed (km/h)</th><th>'+ (teamMode?'Completed rides':'Completed stages')+'</th></tr></thead><tbody>'+records+'</tbody></table></div>'+
+        listFooter(shown.length,ordered.length,prefs.showLeaders,'show-leaders',names) : empty('No '+names+' completed '+terrainLabel[type]+' stages in this scope.'))+
+      note('Total distance ÷ raw finish time · completed rides only; coverage may differ.')+'</section>';
+    const gains=subjects.filter(r=>available(r.terrain_rank_gain)).sort(moverOrder);
+    const visibleGains=prefs.showGains?gains:gains.slice(0,10);
+    const cohortSize=gains[0]?.ranked_entities;
+    const movers='<aside class="tt-rank-side"><h4>Mountain Rank Gains</h4>'+
+      (gains.length ? note('Flat + Hilly → Mountain · '+num(cohortSize)+' '+names+' ('+(ctx.filters.rank_scope==='filtered'?'matching':'overall')+').')+
+        table([teamMode?'Team':'Rider','Flat/Hilly','Mountain','Gain'],visibleGains.map(r=>[
+          btn('profile-days',r.entity_key,esc(r.entity_name),'data-terrain="mountain"'),num(r.baseline_rank),num(r.mountain_rank),
+          '<span class="'+(r.terrain_rank_gain>0?'tt-gain-up':r.terrain_rank_gain<0?'tt-gain-down':'')+'">'+signed(r.terrain_rank_gain)+'</span>']),prefs.showGains)+
+        listFooter(visibleGains.length,gains.length,prefs.showGains,'show-gains',names) : empty('No matching baseline and mountain results in this scope.'))+'</aside>';
+    return block('profiles',heading('Speed by Stage Type',controls)+tabs+'<div class="tt-terrain-grid">'+leaderboard+movers+'</div>');
+  }
+  function mountainBlock(model, subjects, prefs) {
+    const teamMode=prefs.entityKind==='team';
+    const focus=byKey(subjects,'entity_key',prefs.mountainTeam)||subjects[0];
+    const riders=model.rider.filter(r=>(!teamMode || r.team_key===focus?.entity_key) && r.cells.mountain?.sample_count>0);
+    const podiumRate=c=>c.podium_count/c.sample_count;
     riders.sort((a,b)=>{
-      const x=mountain(a),y=mountain(b);
-      if (!x || !y) return Number(!!y)-Number(!!x) || byName(a.entity_name,b.entity_name);
-      if (prefs.mountainSort==='gap') return Number(x.mean_winner_gap_seconds)-Number(y.mean_winner_gap_seconds) || b.cells.mountain.sample_count-a.cells.mountain.sample_count;
+      const x=a.cells.mountain,y=b.cells.mountain;
+      if (prefs.mountainSort==='gap') return (available(x.mean_winner_gap_seconds)?Number(x.mean_winner_gap_seconds):Infinity)-
+        (available(y.mean_winner_gap_seconds)?Number(y.mean_winner_gap_seconds):Infinity) || y.sample_count-x.sample_count || byName(a.entity_name,b.entity_name);
       return podiumRate(y)-podiumRate(x) || y.sample_count-x.sample_count || byName(a.entity_name,b.entity_name);
     });
-    let controls = select('mountain-sort','Order',[['rate','Podium frequency'],['gap','Smallest mean gap']],prefs.mountainSort);
-    if (teamMode) controls = select('mountain-team','Team members',selected.map(e=>[e.entity_key,e.entity_name]),focus.entity_key)+controls;
-    else controls = select('evidence-scope','Riders',[['selected','Selected profiles'],['all','All riders']],prefs.evidenceScope)+controls;
-    const dayButton = (r,metric,content) => btn('mountain-days',r.entity_key,content,'data-metric="'+metric+'" title="'+
+    const shown=prefs.showMountain?riders:riders.slice(0,10);
+    let controls=select('mountain-sort','Order',[['rate','Podium frequency'],['gap','Smallest mean gap']],prefs.mountainSort);
+    if (teamMode) controls=select('mountain-team','Team members',subjects.map(e=>[e.entity_key,e.entity_name]),focus?.entity_key)+controls;
+    const dayButton=(r,metric,content)=>btn('mountain-days',r.entity_key,content,'data-metric="'+metric+'" title="'+
       (metric==='podiums'?'Podium days':metric==='gap'?'Daily gaps to the winner':'All completed mountain days')+'"');
-    const rows = riders.map(r=>{
-      const c = mountain(r);
-      return [teamMode ? btn('inspect-member',r.entity_key,esc(r.entity_name)) : esc(r.entity_name),esc(r.team_name),
-        c ? num(100*podiumRate(c),1)+'%' : '—', c ? dayButton(r,'podiums',num(c.podium_count))+' / '+dayButton(r,'results',num(c.sample_count)) : '0 / 0',
-        c ? dayButton(r,'gap',num(c.mean_winner_gap_seconds,1)) : '—'];
+    const rows=shown.map(r=>{
+      const c=r.cells.mountain;
+      return ['<span data-mountain-key="'+r.entity_key+'">'+dayButton(r,'results',esc(r.entity_name))+'</span>',esc(r.team_name),
+        '<strong>'+num(100*podiumRate(c),1)+'%</strong>',dayButton(r,'podiums',num(c.podium_count))+' / '+dayButton(r,'results',num(c.sample_count)),
+        available(c.mean_winner_gap_seconds)?dayButton(r,'gap',num(c.mean_winner_gap_seconds,1)):'—'];
     });
-    return block('mountain',heading('Mountain Podiums and Gaps','<div class="analysis-toolbar">'+controls+'</div>') +
-      note('Mean gap includes zero-second finishes.') +
-      (riders.length ? table(['Rider','Team','Podium frequency','Podiums / mountain stages completed','Mean gap to stage winner (s)'],rows,true) :
-        empty('No completed mountain stages in this scope.')));
+    return block('mountain',heading('Mountain Podiums and Gaps','<div class="analysis-toolbar">'+controls+'</div>')+
+      (riders.length ? table(['Rider','Team','Podium frequency','Podiums / completed stages','Mean winner gap (s)'],rows,prefs.showMountain)+
+        listFooter(shown.length,riders.length,prefs.showMountain,'show-mountain') : empty('No completed mountain stages in this scope.'))+
+      note('Mean gap includes zero-second finishes.'));
   }
   pages.rider_specialisation = async function renderTerrainPage(ctx) {
     const rows = await ctx.report('terrain_performance');
@@ -553,11 +554,11 @@
     const model = entities(rows), p=ctx.preferences;
     p.entityKind = p.entityKind==='team' && model.team.length ? 'team' : 'rider';
     p.mountainSort ||= 'rate';
-    p.evidenceScope ||= 'selected';
-    let subjects, selected, evidenceRows, evidenceFailed = false, requestNumber = 0;
+    if (!types.includes(p.terrainType)) p.terrainType=rows.some(r=>r.stage_type==='mountain')?'mountain':types.find(t=>rows.some(r=>r.stage_type===t))||'mountain';
+    let subjects, evidenceRows, evidenceFailed = false, requestNumber = 0;
     function evidenceBlock() {
       const detail = p.teamEvidence;
-      const team = byKey(selected,'entity_key',detail?.team);
+      const team = byKey(subjects,'entity_key',detail?.team);
       if (p.entityKind!=='team' || !team || !detail) return '';
       const control = btn('close-evidence',detail.team,'Close');
       const title = team.entity_name + ' · ' + terrainLabel[detail.terrain] + ' rides';
@@ -591,28 +592,14 @@
     }
     function draw() {
       subjects = model[p.entityKind];
-      if (!subjects.length) {
-        selected = [];
-        const label = p.entityKind==='team' ? 'teams' : 'riders';
-        const control = select('entity-kind','Compare',[['rider','Riders'],['team','Teams']],p.entityKind);
-        paint(ctx,block('profiles',heading('Who Gains Ground in the Mountains?',control) +
-          empty('No '+label+' completed a stage in this scope.')));
-        return;
-      }
-      const defaultA = subjects.find(r=>(p.entityKind==='team'?/visma/i:/poga/i).test(r.entity_name));
-      const a = byKey(subjects,'entity_key',p[p.entityKind+'A']) || defaultA || subjects[0];
-      const others = subjects.filter(r=>r.entity_key!==a.entity_key);
-      const b = byKey(others,'entity_key',p[p.entityKind+'B']) || others.find(r=>(p.entityKind==='team'?/UAE/i:/vingegaard/i).test(r.entity_name)) || others[0];
-      selected = b ? [a,b] : [a];
-      p[p.entityKind+'A']=a.entity_key;
-      p[p.entityKind+'B']=b?.entity_key;
-      paint(ctx,profileBlock(subjects,selected,p,ctx.filters)+evidenceBlock()+mountainBlock(model,selected,p));
+      paint(ctx,profileBlock(ctx,subjects,p)+evidenceBlock()+mountainBlock(model,subjects,p));
     }
     draw();
     bind(ctx,({act,k,terrain,metric},value)=>{
       const key = Number(k);
       if (act==='profile-days') {
         const subject = byKey(subjects,'entity_key',key);
+        if (!subject?.cells[terrain]) return;
         if (p.entityKind==='team' && (Array.isArray(ctx.filters.rider_keys) || ctx.filters.young_only))
           return void loadTeamEvidence(key,terrain,true);
         return ctx.drill({dimension:'terrain',path:[terrain],metric:'results',
@@ -620,25 +607,24 @@
       }
       if (act==='mountain-days') {
         const r=byKey(model.rider,'entity_key',key);
+        if (!r?.cells.mountain) return;
         return teamDrill(ctx,r.team_key,key,metric,r.entity_name+' · mountain '+
           ({podiums:'podium days',gap:'winner gaps',results:'finishes'})[metric],terrainFilters(ctx,'mountain'));
       }
-      if (['close-evidence','entity-kind','subject-a','subject-b','focus-subject','inspect-member'].includes(act)) {
+      if (['close-evidence','entity-kind','terrain-type'].includes(act)) {
         ++requestNumber;
         delete p.teamEvidence;
       }
-      if (act==='entity-kind') p.entityKind=value;
-      if (act==='subject-a') p[p.entityKind+'A']=Number(value);
-      if (act==='subject-b') p[p.entityKind+'B']=Number(value);
-      if (act==='focus-subject') p[p.entityKind+'A']=key;
-      if (act==='evidence-scope') p.evidenceScope=value;
-      if (act==='mountain-sort') p.mountainSort=value;
-      if (act==='mountain-team') p.mountainTeam=Number(value);
-      if (act==='inspect-member') { p.entityKind='rider'; p.riderA=key; }
+      if (act==='entity-kind') { p.entityKind=value==='team'?'team':'rider'; p.showLeaders=false; p.showGains=false; p.showMountain=false; }
+      if (act==='terrain-type' && types.includes(k)) { p.terrainType=k; p.showLeaders=false; }
+      if (act==='show-leaders') p.showLeaders=!p.showLeaders;
+      if (act==='show-gains') p.showGains=!p.showGains;
+      if (act==='show-mountain') p.showMountain=!p.showMountain;
+      if (act==='mountain-sort') { p.mountainSort=value; p.showMountain=false; }
+      if (act==='mountain-team') { p.mountainTeam=Number(value); p.showMountain=false; }
       draw();
-      if (act==='inspect-member') jump(ctx,'profiles');
     });
-    if (p.teamEvidence && p.entityKind==='team' && byKey(selected,'entity_key',p.teamEvidence.team))
+    if (p.teamEvidence && p.entityKind==='team' && byKey(subjects,'entity_key',p.teamEvidence.team))
       await loadTeamEvidence(p.teamEvidence.team,p.teamEvidence.terrain,false);
   };
 })();
